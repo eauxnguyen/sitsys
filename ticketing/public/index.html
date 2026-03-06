@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SITSYS Service Desk v2.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0c0f;--bg2:#111418;--bg3:#161b22;--bg4:#1e252f;
+  --border:#21262d;--border2:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#f0b429;--accent2:#e68a00;--accent-dim:rgba(240,180,41,0.12);
+  --blue:#58a6ff;--green:#3fb950;--red:#f85149;
+  --purple:#bc8cff;--orange:#ffa657;--teal:#39d353;
+  --r:6px;--r2:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;overflow:hidden;}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:40px;width:380px;animation:slideModal .3s ease;}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.login-logo-icon{width:42px;height:42px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#000;font-family:'Syne',sans-serif;}
+.login-logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;}
+.login-logo-ver{font-size:11px;color:var(--text3);}
+.login-error{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.3);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:16px;display:none;}
+
+/* APP */
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#000;font-family:'Syne',sans-serif;}
+.logo-text{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+.logo-ver{font-size:10px;color:var(--text3);}
+.nav{flex:1;overflow-y:auto;padding:8px 0;}
+.nav-section{padding:12px 16px 4px;font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;cursor:pointer;color:var(--text2);border-left:2px solid transparent;transition:all .15s;font-size:12.5px;}
+.nav-item:hover{background:var(--bg3);color:var(--text);}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-dim);}
+.nav-icon{width:16px;text-align:center;font-size:14px;}
+.nav-badge{margin-left:auto;background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;}
+.nav-badge.blue{background:var(--blue);color:#000;}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;}
+.logout-btn{font-size:11px;color:var(--text3);cursor:pointer;padding:3px 8px;border-radius:var(--r);border:1px solid var(--border);background:none;font-family:'JetBrains Mono';}
+.logout-btn:hover{color:var(--red);border-color:rgba(248,81,73,.4);}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;}
+.topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;flex:1;}
+.topbar-actions{display:flex;gap:8px;align-items:center;}
+.topbar-stats{display:flex;gap:20px;}
+.stat-item{display:flex;flex-direction:column;align-items:flex-end;}
+.stat-num{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;}
+.stat-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r);font-family:'JetBrains Mono';font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{background:var(--bg3);color:var(--text);}
+.btn-danger{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3);}
+.btn-danger:hover{background:rgba(248,81,73,.25);}
+.btn-sm{padding:4px 10px;font-size:11px;}
+
+.page{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.page.active{display:flex;}
+.content-inner{flex:1;display:flex;overflow:hidden;}
+
+.filter-bar{padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0;}
+.search-wrap{position:relative;flex:1;min-width:200px;max-width:360px;}
+.search-wrap::before{content:'⌕';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;z-index:1;}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px 6px 30px;color:var(--text);font-family:'JetBrains Mono';font-size:12px;}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.filter-select{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px;color:var(--text);font-family:'JetBrains Mono';font-size:12px;cursor:pointer;}
+.filter-select:focus{outline:none;border-color:var(--accent);}
+.view-toggle{display:flex;gap:2px;}
+.view-btn{padding:5px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--text3);cursor:pointer;font-size:13px;transition:all .15s;}
+.view-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+
+#preset-bar{display:flex;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--bg);min-height:36px;align-items:center;}
+.preset-btn{padding:3px 10px;border-radius:var(--r);font-size:11px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:all .15s;font-family:'JetBrains Mono';}
+.preset-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+
+/* TICKET TABLE */
+.ticket-list{flex:1;overflow-y:auto;}
+.ticket-row{display:grid;grid-template-columns:28px 150px 1fr 160px 110px 90px 120px 90px;align-items:center;padding:0 16px;height:48px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.ticket-row:hover{background:var(--bg3);}
+.ticket-row.selected{background:rgba(240,180,41,.07);border-left:2px solid var(--accent);}
+.ticket-row.thead{background:var(--bg3);height:36px;cursor:default;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border2);}
+.ticket-row.thead:hover{background:var(--bg3);}
+
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap;}
+.badge-new{background:rgba(88,166,255,.2);color:var(--blue);}
+.badge-open{background:rgba(88,166,255,.15);color:var(--blue);}
+.badge-inprogress{background:rgba(255,166,87,.2);color:var(--orange);}
+.badge-resolved{background:rgba(63,185,80,.15);color:var(--green);}
+.badge-closed{background:rgba(110,118,129,.15);color:var(--text3);}
+.badge-critical{background:rgba(248,81,73,.2);color:var(--red);border:1px solid rgba(248,81,73,.3);}
+.badge-high{background:rgba(248,81,73,.1);color:#ff7b72;}
+.badge-medium{background:rgba(255,166,87,.15);color:var(--orange);}
+.badge-low{background:rgba(63,185,80,.1);color:#7ee787;}
+.badge-internal{background:rgba(188,140,255,.15);color:var(--purple);}
+.badge-client{background:rgba(57,211,83,.12);color:var(--teal);}
+.badge-admin{background:rgba(248,81,73,.12);color:var(--red);}
+.badge-tech{background:rgba(88,166,255,.12);color:var(--blue);}
+
+/* KANBAN */
+.kanban{display:flex;gap:14px;padding:16px;overflow-x:auto;align-items:flex-start;flex:1;}
+.kanban-col{min-width:250px;width:250px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);display:flex;flex-direction:column;max-height:calc(100vh - 185px);}
+.kanban-header{padding:12px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.kanban-body{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;}
+.kanban-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .15s;}
+.kanban-card:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3);}
+.kanban-card-id{font-size:10px;color:var(--text3);margin-bottom:6px;display:flex;gap:6px;align-items:center;}
+.kanban-card-subject{font-size:12px;font-weight:500;color:var(--text);margin-bottom:8px;line-height:1.4;}
+.kanban-card-meta{display:flex;justify-content:space-between;align-items:center;}
+.drag-over{border:1px dashed var(--accent)!important;background:var(--accent-dim)!important;}
+
+/* DETAIL PANEL */
+.detail-panel{width:540px;min-width:540px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .2s;}
+.detail-panel.hidden{width:0;min-width:0;overflow:hidden;}
+.detail-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0;}
+.detail-id{font-size:11px;color:var(--text3);margin-bottom:4px;}
+.detail-subject{font-size:15px;font-weight:700;font-family:'Syne',sans-serif;color:var(--text);line-height:1.3;}
+.detail-meta{padding:14px 20px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:12px;flex-shrink:0;}
+.meta-field label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;}
+.meta-field span{font-size:12px;color:var(--text);}
+.meta-field select,.meta-field input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:5px 8px;color:var(--text);font-family:'JetBrains Mono';font-size:11px;}
+.meta-field select:focus,.meta-field input:focus{outline:none;border-color:var(--accent);}
+.detail-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.detail-tab{padding:10px 16px;font-size:12px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s;}
+.detail-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.detail-tab-content{display:none;padding:16px 20px;flex-direction:column;gap:12px;}
+.detail-tab-content.active{display:flex;}
+
+.note-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px;animation:fadeIn .2s ease;}
+.note-card.internal{border-left:3px solid var(--purple);}
+.note-card.client{border-left:3px solid var(--teal);}
+.note-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.note-author{font-size:11px;font-weight:600;color:var(--text);}
+.note-time{font-size:10px;color:var(--text3);}
+.note-body{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;}
+
+.note-composer{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;}
+.note-tabs{display:flex;border-bottom:1px solid var(--border);}
+.note-tab{padding:8px 14px;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);transition:all .15s;}
+.note-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.note-textarea{width:100%;min-height:80px;padding:12px 14px;background:transparent;border:none;resize:none;color:var(--text);font-family:'JetBrains Mono';font-size:12px;line-height:1.6;}
+.note-textarea:focus{outline:none;}
+.note-composer-footer{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--border);}
+.note-composer-footer span{font-size:10px;color:var(--text3);}
+
+.time-entry-row{display:grid;grid-template-columns:90px 60px 1fr 80px;gap:8px;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);font-size:11px;}
+
+/* CLIENTS */
+.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:16px;overflow-y:auto;flex:1;align-content:start;}
+.client-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;cursor:pointer;transition:all .15s;animation:fadeIn .25s ease;}
+.client-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.client-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#000;font-family:'Syne',sans-serif;flex-shrink:0;}
+
+/* DATA TABLES */
+.data-table{flex:1;overflow-y:auto;}
+.data-row{display:grid;padding:10px 20px;border-bottom:1px solid var(--border);align-items:center;transition:background .1s;font-size:12px;}
+.data-row:hover{background:var(--bg3);}
+.data-row.thead{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;background:var(--bg3);font-weight:600;position:sticky;top:0;z-index:5;border-bottom:1px solid var(--border2);}
+.data-row.thead:hover{background:var(--bg3);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px;flex-shrink:0;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;}
+.stat-card-num{font-size:32px;font-weight:800;font-family:'Syne',sans-serif;}
+.stat-card-label{font-size:11px;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
+.stats-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 16px 16px;flex:1;overflow-y:auto;}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;}
+.chart-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;font-weight:600;}
+.chart-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:11px;}
+.chart-bar-label{width:110px;color:var(--text2);text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chart-bar-track{flex:1;background:var(--bg3);border-radius:3px;height:14px;overflow:hidden;}
+.chart-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+.chart-bar-val{width:36px;color:var(--text3);font-size:11px;text-align:right;}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);animation:fadeOverlay .2s ease;}
+@keyframes fadeOverlay{from{opacity:0}to{opacity:1}}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);width:620px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:slideModal .2s ease;}
+.modal-sm{width:400px;}
+@keyframes slideModal{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1;}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;}
+.modal-body{padding:20px;display:flex;flex-direction:column;gap:16px;}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group label{font-size:11px;color:var(--text2);font-weight:500;}
+.form-input,.form-select,.form-textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-family:'JetBrains Mono';font-size:12px;transition:border-color .15s;width:100%;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);}
+.form-textarea{min-height:90px;resize:vertical;}
+.form-hint{font-size:10px;color:var(--text3);}
+.close-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px 8px;border-radius:4px;}
+.close-btn:hover{background:var(--bg4);color:var(--text);}
+
+/* TOASTS */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:12px;min-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slideToast .3s ease;}
+.toast.success{border-left:3px solid var(--green);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--blue);}
+@keyframes slideToast{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text3);font-size:13px;text-align:center;padding:40px;min-height:150px;}
+.empty-icon{font-size:48px;opacity:.3;}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--text3);}
+input[type=checkbox]{accent-color:var(--accent);cursor:pointer;width:14px;height:14px;}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">S</div>
+      <div><div class="login-logo-text">SITSYS</div><div class="login-logo-ver">Service Desk v2.5</div></div>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:24px;">Sign in to your workspace</div>
+    <div class="login-error" id="login-error"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-group"><label>Username</label><input type="text" class="form-input" id="login-user" placeholder="admin" autocomplete="username"></div>
+      <div class="form-group"><label>Password</label><input type="password" class="form-input" id="login-pass" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="btn btn-primary" id="btn-login" style="width:100%;justify-content:center;padding:10px;margin-top:4px;">Sign In →</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app hidden" id="app">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div><div class="logo-text">SITSYS</div><div class="logo-ver">Service Desk v2.5</div></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">Main</div>
+      <div class="nav-item active" data-page="tickets"><span class="nav-icon">🎫</span> Tickets <span class="nav-badge" id="nav-open-count">0</span></div>
+      <div class="nav-item" data-page="clients"><span class="nav-icon">🏢</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></div>
+      <div class="nav-item" data-page="contacts"><span class="nav-icon">👥</span> Contacts</div>
+      <div class="nav-item" data-page="stats"><span class="nav-icon">📊</span> Statistics</div>
+
+      <div class="nav-section">Quick Views</div>
+      <div class="nav-item" id="nav-my-tickets"><span class="nav-icon">📋</span> My Tickets</div>
+      <div class="nav-item" id="nav-unassigned"><span class="nav-icon">📌</span> Unassigned</div>
+      <div class="nav-item" id="nav-critical"><span class="nav-icon">🔴</span> Critical</div>
+      <div class="nav-item" id="nav-new-status"><span class="nav-icon">✨</span> New</div>
+
+      <div class="nav-section">Saved Presets</div>
+      <div id="nav-presets"></div>
+
+      <div class="nav-section">Admin</div>
+      <div class="nav-item" data-page="users"><span class="nav-icon">👤</span> Users</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="display:flex;align-items:center;font-size:11px;color:var(--text2);"><span class="status-dot"></span><span id="current-user">—</span></div>
+      <button class="logout-btn" id="btn-logout">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">All Tickets</div>
+      <div class="topbar-actions">
+        <div class="topbar-stats" id="topbar-stats">
+          <div class="stat-item"><span class="stat-num" id="stat-open" style="color:var(--blue)">0</span><span class="stat-label">Open</span></div>
+          <div class="stat-item"><span class="stat-num" id="stat-inprog" style="color:var(--orange)">0</span><span class="stat-label">In Progress</span></div>
+          <div class="stat-item"><span class="stat-num" id="stat-critical" style="color:var(--red)">0</span><span class="stat-label">Critical</span></div>
+        </div>
+        <button class="btn btn-primary" id="btn-new-ticket">+ New Ticket</button>
+        <button class="btn btn-ghost hidden" id="btn-new-client">+ Client</button>
+        <button class="btn btn-ghost hidden" id="btn-new-contact">+ Contact</button>
+        <button class="btn btn-ghost hidden" id="btn-new-user">+ User</button>
+      </div>
+    </div>
+
+    <!-- TICKETS PAGE -->
+    <div class="page active" id="page-tickets">
+      <div class="filter-bar">
+        <div class="search-wrap"><input type="text" class="search-input" id="ticket-search" placeholder="Search by title, ID, client..."></div>
+        <select class="filter-select" id="filter-status">
+          <option value="">All Status</option>
+          <option value="New">New</option>
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option><option value="Follow-up">Follow-up</option>
+        </select>
+        <select class="filter-select" id="filter-priority">
+          <option value="">All Priority</option>
+          <option value="Project">Project</option><option value="Critical">Critical</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        <select class="filter-select" id="filter-client"><option value="">All Clients</option></select>
+        <select class="filter-select" id="filter-assignee"><option value="">All Assignees</option></select>
+        <button class="btn btn-ghost btn-sm" id="btn-save-preset">💾 Save</button>
+        <div class="view-toggle">
+          <button class="view-btn active" id="view-list" title="List view">☰</button>
+          <button class="view-btn" id="view-kanban" title="Kanban view">⊞</button>
+        </div>
+      </div>
+      <div id="preset-bar"><span style="font-size:11px;color:var(--text3);">No saved presets · use 💾 Save to create one</span></div>
+
+      <div class="content-inner">
+        <div id="list-view" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+          <div class="ticket-list">
+            <div class="ticket-row thead">
+              <div></div><div>Ticket ID</div><div>Title</div><div>Client</div>
+              <div>Status</div><div>Priority</div><div>Assigned To</div><div>Updated</div>
+            </div>
+            <div id="ticket-rows"></div>
+          </div>
+        </div>
+        <div id="kanban-view" class="kanban" style="display:none;"></div>
+
+        <!-- DETAIL PANEL -->
+        <div class="detail-panel hidden" id="detail-panel">
+          <div class="detail-header">
+            <div>
+              <div class="detail-id" id="d-id">—</div>
+              <div class="detail-subject" id="d-subject">—</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+              <button class="btn btn-ghost btn-sm" id="btn-edit-ticket">✏️ Edit</button>
+              <button class="btn btn-danger btn-sm" id="btn-delete-ticket">🗑</button>
+              <button class="close-btn" id="btn-close-detail">✕</button>
+            </div>
+          </div>
+          <div class="detail-meta" id="d-meta"></div>
+          <div class="detail-tabs">
+            <div class="detail-tab active" data-dtab="notes">Notes</div>
+            <div class="detail-tab" data-dtab="time">Time</div>
+            <div class="detail-tab" data-dtab="info">Description</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;">
+            <div class="detail-tab-content active" id="dtab-notes"><div id="d-notes"></div></div>
+            <div class="detail-tab-content" id="dtab-time"><div id="d-time"></div></div>
+            <div class="detail-tab-content" id="dtab-info"><div id="d-info"></div></div>
+          </div>
+          <div style="padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;">
+            <div class="note-composer">
+              <div class="note-tabs">
+                <div class="note-tab active" data-notetab="internal">🔒 Internal Note</div>
+                <div class="note-tab" data-notetab="client">📧 Client-Facing</div>
+              </div>
+              <textarea class="note-textarea" id="note-input" placeholder="Write a note..."></textarea>
+              <div class="note-composer-footer">
+                <span id="note-type-hint">Visible to team only</span>
+                <button class="btn btn-primary btn-sm" id="btn-add-note">Post Note</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENTS PAGE -->
+    <div class="page" id="page-clients">
+      <div class="filter-bar">
+        <div class="search-wrap"><input type="text" class="search-input" id="client-search" placeholder="Search clients..."></div>
+        <div class="view-toggle">
+          <button class="view-btn active" id="client-view-grid">⊞</button>
+          <button class="view-btn" id="client-view-list">☰</button>
+        </div>
+      </div>
+      <div id="clients-container" class="grid-view"></div>
+    </div>
+
+    <!-- CONTACTS PAGE -->
+    <div class="page" id="page-contacts">
+      <div class="filter-bar">
+        <div class="search-wrap"><input type="text" class="search-input" id="contact-search" placeholder="Search contacts..."></div>
+        <select class="filter-select" id="contact-filter-client"><option value="">All Clients</option></select>
+      </div>
+      <div class="data-table">
+        <div class="data-row thead" style="grid-template-columns:1fr 180px 140px 160px 130px 130px;"><div>Name</div><div>Email</div><div>Phone</div><div>Client</div><div>Title</div><div>Actions</div></div>
+        <div id="contact-rows"></div>
+      </div>
+    </div>
+
+    <!-- STATS PAGE -->
+    <div class="page" id="page-stats">
+      <div class="stats-grid" id="stats-summary"></div>
+      <div class="stats-charts" id="stats-charts"></div>
+    </div>
+
+    <!-- USERS PAGE -->
+    <div class="page" id="page-users">
+      <div class="filter-bar"><span style="font-size:12px;color:var(--text2);">Manage technician and admin accounts · Only admins can create users</span></div>
+      <div class="data-table">
+        <div class="data-row thead" style="grid-template-columns:130px 1fr 200px 100px;"><div>Username</div><div>Full Name</div><div>Email</div><div>Role</div></div>
+        <div id="user-rows"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- TICKET MODAL -->
+<div class="modal-overlay hidden" id="modal-ticket">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="ticket-modal-title">New Ticket</div><button class="close-btn" onclick="closeModal('modal-ticket')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Title *</label><input type="text" class="form-input" id="t-title" placeholder="Brief description of the issue"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Client *</label><select class="form-select" id="t-client"></select></div>
+        <div class="form-group"><label>Contact</label><select class="form-select" id="t-contact"><option value="">— None —</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Status</label>
+          <select class="form-select" id="t-status">
+            <option value="New">New</option><option value="Open">Open</option>
+            <option value="In Progress">In Progress</option><option value="Resolved">Resolved</option><option value="Closed">Closed</option><option value="Follow-up">Follow-up</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Priority</label>
+          <select class="form-select" id="t-priority">
+            <option value="Project">Project</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Assigned To</label><select class="form-select" id="t-assignee"><option value="">— Unassigned —</option></select></div>
+        <div class="form-group"><label>Category</label>
+          <select class="form-select" id="t-category">
+            <option>General</option><option>Network</option><option>Hardware</option>
+            <option>Software</option><option>Security</option><option>Email</option>
+            <option>Backup</option><option>Billing</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Description *</label><textarea class="form-textarea" id="t-description" placeholder="Detailed description of the issue..." style="min-height:110px;"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ticket')">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-ticket">Create Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- TIME MODAL -->
+<div class="modal-overlay hidden" id="modal-time">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title">Log Time</div><button class="close-btn" onclick="closeModal('modal-time')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Hours *</label><input type="number" class="form-input" id="te-hours" placeholder="1.5" step="0.25" min="0.25"></div>
+        <div class="form-group"><label>Date *</label><input type="date" class="form-input" id="te-date"></div>
+      </div>
+      <div class="form-group"><label>Description</label><input type="text" class="form-input" id="te-desc" placeholder="What was done..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-time')">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-time">Log Time</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT MODAL -->
+<div class="modal-overlay hidden" id="modal-client">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="client-modal-title">New Client</div><button class="close-btn" onclick="closeModal('modal-client')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Company Name *</label><input type="text" class="form-input" id="c-name" placeholder="Acme Corporation"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input type="text" class="form-input" id="c-phone" placeholder="+1 555 0000"></div>
+        <div class="form-group"><label>Website</label><input type="text" class="form-input" id="c-website" placeholder="https://..."></div>
+      </div>
+      <div class="form-group"><label>Address</label><input type="text" class="form-input" id="c-address" placeholder="123 Main St"></div>
+      <div class="form-row-3">
+        <div class="form-group"><label>City</label><input type="text" class="form-input" id="c-city"></div>
+        <div class="form-group"><label>State</label><input type="text" class="form-input" id="c-state"></div>
+        <div class="form-group"><label>ZIP</label><input type="text" class="form-input" id="c-zip"></div>
+      </div>
+      <div class="form-group"><label>Internal Notes</label><textarea class="form-textarea" id="c-notes" placeholder="Notes about this client..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-client')">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-client">Save Client</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT MODAL -->
+<div class="modal-overlay hidden" id="modal-contact">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="contact-modal-title">New Contact</div><button class="close-btn" onclick="closeModal('modal-contact')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Full Name *</label><input type="text" class="form-input" id="ct-name" placeholder="John Smith"></div>
+        <div class="form-group"><label>Title / Role</label><input type="text" class="form-input" id="ct-title" placeholder="IT Manager"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Email</label><input type="email" class="form-input" id="ct-email" placeholder="john@company.com"></div>
+        <div class="form-group"><label>Phone</label><input type="text" class="form-input" id="ct-phone" placeholder="+1 555 0000"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Mobile</label><input type="text" class="form-input" id="ct-mobile"></div>
+        <div class="form-group"><label>Client *</label><select class="form-select" id="ct-client"></select></div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="ct-primary"> Set as Primary Contact</label>
+        <span class="form-hint">Primary contacts appear first in lists</span>
+      </div>
+      <div class="form-group"><label>Notes</label><textarea class="form-textarea" id="ct-notes"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-contact')">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-contact">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER MODAL -->
+<div class="modal-overlay hidden" id="modal-user">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title">New User</div><button class="close-btn" onclick="closeModal('modal-user')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Username *</label><input type="text" class="form-input" id="u-username"></div>
+        <div class="form-group"><label>Password *</label><input type="password" class="form-input" id="u-password"></div>
+      </div>
+      <div class="form-group"><label>Full Name</label><input type="text" class="form-input" id="u-fullname"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Email</label><input type="email" class="form-input" id="u-email"></div>
+        <div class="form-group"><label>Role</label><select class="form-select" id="u-role"><option value="technician">Technician</option><option value="admin">Admin</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-user">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRESET MODAL -->
+<div class="modal-overlay hidden" id="modal-preset">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title">Save Filter Preset</div><button class="close-btn" onclick="closeModal('modal-preset')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Preset Name *</label><input type="text" class="form-input" id="preset-name" placeholder="e.g. Critical Open Tickets"></div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:12px;font-size:11px;color:var(--text3);line-height:1.8;" id="preset-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-preset')">Cancel</button>
+      <button class="btn btn-primary" id="btn-confirm-preset">Save Preset</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="modal-confirm">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title">Confirm</div><button class="close-btn" onclick="closeModal('modal-confirm')">✕</button></div>
+    <div class="modal-body"><div id="confirm-msg" style="font-size:13px;color:var(--text2);line-height:1.6;"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Cancel</button>
+      <button class="btn btn-danger" id="btn-confirm-action">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Version 2.5.1 - Cache bust
+// ===================== STATE =====================
+const S = {
+  tickets:[], clients:[], contacts:[], users:[],
+  currentUser:null, selectedTicketId:null,
+  ticketView:'list', clientView:'grid', currentPage:'tickets',
+  noteType:'internal', editingTicketId:null, editingClientId:null,
+  editingContactId:null, editingContactClientId:null,
+  filters:{search:'',status:'',priority:'',client:'',assignee:''},
+  presets:JSON.parse(localStorage.getItem('sitsys_presets')||'[]'),
+};
+
+// ===================== API =====================
+async function api(method, path, body) {
+  const opts={method,headers:{'Content-Type':'application/json'},credentials:'include'};
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(path,opts);
+  if(res.status===401){showLogin();return null;}
+  if(!res.ok){const e=await res.json().catch(()=>({error:res.statusText}));throw new Error(e.error||res.statusText);}
+  return res.json();
+}
+
+// ===================== AUTH =====================
+async function checkAuth(){
+  try{
+    const d=await api('GET','/api/auth/check');
+    if(d?.authenticated){S.currentUser=d.user;showApp();}else showLogin();
+  }catch(e){showLogin();}
+}
+function showLogin(){document.getElementById('login-screen').classList.remove('hidden');document.getElementById('app').classList.add('hidden');}
+function showApp(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('current-user').textContent=S.currentUser?.full_name||S.currentUser?.username||'User';
+  loadAll();
+}
+document.getElementById('btn-login').addEventListener('click',doLogin);
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+async function doLogin(){
+  const username=document.getElementById('login-user').value.trim();
+  const password=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  err.style.display='none';
+  try{
+    const d=await api('POST','/api/login',{username,password});
+    if(d?.success){S.currentUser=d.user;showApp();}
+  }catch(e){err.textContent=e.message||'Invalid credentials';err.style.display='block';}
+}
+document.getElementById('btn-logout').addEventListener('click',async()=>{
+  await api('POST','/api/logout').catch(()=>{});
+  S.currentUser=null;showLogin();
+});
+
+// ===================== LOAD =====================
+async function loadAll(){
+  await Promise.allSettled([loadTickets(),loadClients(),loadUsers()]);
+  populateDropdowns();renderAll();
+}
+async function loadTickets(){const d=await api('GET','/api/tickets').catch(()=>[]);S.tickets=d||[];}
+async function loadClients(){
+  const d=await api('GET','/api/clients').catch(()=>[]);
+  S.clients=d||[];
+  S.contacts=[];
+  await Promise.allSettled(S.clients.map(async c=>{
+    const cts=await api('GET',`/api/clients/${c.id}/contacts`).catch(()=>[]);
+    (cts||[]).forEach(ct=>S.contacts.push({...ct,client_id:c.id,client_name:c.company_name}));
+  }));
+}
+async function loadUsers(){const d=await api('GET','/api/users').catch(()=>[]);S.users=d||[];}
+
+// ===================== DROPDOWNS =====================
+function populateDropdowns(){
+  const fc=document.getElementById('filter-client'),sv=fc.value;
+  fc.innerHTML='<option value="">All Clients</option>';
+  S.clients.forEach(c=>fc.innerHTML+=`<option value="${c.id}">${esc(c.company_name)}</option>`);
+  fc.value=sv;
+
+  const fa=document.getElementById('filter-assignee'),sva=fa.value;
+  fa.innerHTML='<option value="">All Assignees</option><option value="__none__">Unassigned</option>';
+  S.users.forEach(u=>fa.innerHTML+=`<option value="${esc(u.username)}">${esc(u.full_name||u.username)}</option>`);
+  fa.value=sva;
+
+  const tc=document.getElementById('t-client');
+  tc.innerHTML='<option value="">— Select Client —</option>';
+  S.clients.forEach(c=>tc.innerHTML+=`<option value="${c.id}">${esc(c.company_name)}</option>`);
+
+  const ta=document.getElementById('t-assignee');
+  ta.innerHTML='<option value="">— Unassigned —</option>';
+  S.users.forEach(u=>ta.innerHTML+=`<option value="${esc(u.username)}">${esc(u.full_name||u.username)}</option>`);
+
+  const ctc=document.getElementById('ct-client');
+  ctc.innerHTML='<option value="">— Select Client —</option>';
+  S.clients.forEach(c=>ctc.innerHTML+=`<option value="${c.id}">${esc(c.company_name)}</option>`);
+
+  const cfc=document.getElementById('contact-filter-client');
+  cfc.innerHTML='<option value="">All Clients</option>';
+  S.clients.forEach(c=>cfc.innerHTML+=`<option value="${c.id}">${esc(c.company_name)}</option>`);
+}
+
+// ===================== RENDER ALL =====================
+function renderAll(){updateStats();renderTickets();renderKanban();renderClients();renderContacts();renderUsers();renderPresets();}
+function updateStats(){
+  const t=S.tickets;
+  const o=t.filter(x=>x.status==='Open'||x.status==='New').length;
+  const ip=t.filter(x=>x.status==='In Progress').length;
+  const cr=t.filter(x=>x.priority==='Critical'&&x.status!=='Resolved'&&x.status!=='Closed').length;
+  document.getElementById('stat-open').textContent=o;
+  document.getElementById('stat-inprog').textContent=ip;
+  document.getElementById('stat-critical').textContent=cr;
+  document.getElementById('nav-open-count').textContent=o+ip;
+  document.getElementById('nav-client-count').textContent=S.clients.length;
+}
+
+// ===================== TICKET LIST =====================
+function getFiltered(){
+  let t=[...S.tickets];
+  const f=S.filters;
+  if(f.search){const s=f.search.toLowerCase();t=t.filter(tk=>tk.title?.toLowerCase().includes(s)||tk.id?.toLowerCase().includes(s)||tk.client_name?.toLowerCase().includes(s)||tk.description?.toLowerCase().includes(s));}
+  if(f.status) t=t.filter(tk=>tk.status===f.status);
+  if(f.priority) t=t.filter(tk=>tk.priority===f.priority);
+  if(f.client) t=t.filter(tk=>tk.client_id==f.client);
+  if(f.assignee==='__none__') t=t.filter(tk=>!tk.assigned_to);
+  else if(f.assignee) t=t.filter(tk=>tk.assigned_to===f.assignee);
+  return t;
+}
+function renderTickets(){
+  const tickets=getFiltered();
+  const container=document.getElementById('ticket-rows');
+  if(!tickets.length){container.innerHTML=`<div class="empty-state"><div class="empty-icon">🎫</div><div>No tickets match your filters</div><button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="margin-top:8px;">Clear filters</button></div>`;return;}
+  const pc={Critical:'var(--red)',High:'#ff7b72',Medium:'var(--orange)',Low:'var(--green)'};
+  container.innerHTML=tickets.map(tk=>{
+    const sel=S.selectedTicketId===tk.id?'selected':'';
+    return `<div class="ticket-row ${sel}" onclick="selectTicket('${tk.id}')">
+      <div style="display:flex;align-items:center;"><div style="width:3px;height:30px;border-radius:2px;background:${pc[tk.priority]||'var(--text3)'}"></div></div>
+      <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tk.id)}</div>
+      <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;">${esc(tk.title)}</div>
+      <div style="font-size:11px;color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tk.client_name||'—')}</div>
+      <div>${statusBadge(tk.status)}</div>
+      <div>${priorityBadge(tk.priority)}</div>
+      <div style="font-size:11px;color:var(--text2);">${tk.assigned_to?esc(tk.assigned_to):'<span style="color:var(--text3)">—</span>'}</div>
+      <div style="font-size:11px;color:var(--text3);">${timeAgo(tk.updated_at)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== KANBAN =====================
+function renderKanban(){
+  const statuses=['New','Open','In Progress','Resolved','Closed'];
+  const colors={'New':'var(--blue)','Open':'var(--blue)','In Progress':'var(--orange)','Resolved':'var(--green)','Closed':'var(--text3)'};
+  const tickets=getFiltered();
+  document.getElementById('kanban-view').innerHTML=statuses.map(s=>{
+    const cols=tickets.filter(t=>t.status===s);
+    return `<div class="kanban-col" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropTicket(event,${JSON.stringify(s)})">
+      <div class="kanban-header"><span style="color:${colors[s]}">${s}</span><span style="color:var(--text3);font-weight:400;font-size:11px;">${cols.length}</span></div>
+      <div class="kanban-body">${cols.map(tk=>`
+        <div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('tid',${JSON.stringify(tk.id)})" onclick="selectTicket('${tk.id}')">
+          <div class="kanban-card-id">${esc(tk.id)} ${priorityBadge(tk.priority)}</div>
+          <div class="kanban-card-subject">${esc(tk.title)}</div>
+          <div class="kanban-card-meta"><span style="font-size:10px;color:var(--blue);">${esc(tk.client_name||'—')}</span><span style="font-size:10px;color:var(--text3);">${esc(tk.assigned_to||'')}</span></div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+async function dropTicket(e,newStatus){
+  e.currentTarget.classList.remove('drag-over');
+  const id=e.dataTransfer.getData('tid');
+  const tk=S.tickets.find(t=>t.id===id);
+  if(!tk)return;
+  try{
+    await api('PUT',`/api/tickets/${id}`,{...tk,status:newStatus,client_id:tk.client_id,contact_id:tk.contact_id||null});
+    tk.status=newStatus;tk.updated_at=new Date().toISOString();
+    renderTickets();renderKanban();updateStats();
+    showToast(`${id} → ${newStatus}`,'success');
+  }catch(e){showToast(e.message,'error');}
+}
+
+// ===================== TICKET DETAIL =====================
+async function selectTicket(id){
+window.selectTicket=selectTicket;
+  S.selectedTicketId=id;
+  document.getElementById('detail-panel').classList.remove('hidden');
+  renderTickets();renderKanban();
+  try{
+    const tk=await api('GET',`/api/tickets/${id}`);
+    if(!tk)return;
+    const idx=S.tickets.findIndex(t=>t.id===id);
+    if(idx!==-1)S.tickets[idx]={...S.tickets[idx],...tk};
+    document.getElementById('d-id').textContent=`${tk.id} · ${tk.category}`;
+    document.getElementById('d-subject').textContent=tk.title;
+    document.getElementById('d-meta').innerHTML=`
+      <div class="meta-field"><label>Status</label>
+        <select onchange="quickUpdate('${id}','status',this.value)">
+          ${['New','Open','In Progress','Resolved','Closed'].map(s=>`<option ${tk.status===s?'selected':''}>${s}</option>`).join('')}
+        </select></div>
+      <div class="meta-field"><label>Priority</label>
+        <select onchange="quickUpdate('${id}','priority',this.value)">
+          ${['Critical','High','Medium','Low'].map(p=>`<option ${tk.priority===p?'selected':''}>${p}</option>`).join('')}
+        </select></div>
+      <div class="meta-field"><label>Client</label><span>${esc(tk.client_name||'—')}</span></div>
+      <div class="meta-field"><label>Contact</label><span>${esc(tk.contact_name||'—')}</span></div>
+      <div class="meta-field"><label>Assigned To</label>
+        <select onchange="quickUpdate('${id}','assigned_to',this.value||null)">
+          <option value="" ${!tk.assigned_to?'selected':''}>— Unassigned —</option>
+          ${S.users.map(u=>`<option value="${esc(u.username)}" ${tk.assigned_to===u.username?'selected':''}>${esc(u.full_name||u.username)}</option>`).join('')}
+        </select></div>
+      <div class="meta-field"><label>Created By</label><span>${esc(tk.created_by||'—')}</span></div>`;
+    renderNotes(tk.notes||[]);
+    renderTimeEntries(tk.timeEntries||[]);
+    document.getElementById('d-info').innerHTML=`
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;">${esc(tk.description||'No description.')}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:12px;">Created: ${new Date(tk.created_at).toLocaleString()}<br>Updated: ${new Date(tk.updated_at).toLocaleString()}</div>`;
+  }catch(e){showToast('Failed to load ticket','error');}
+}
+async function quickUpdate(id,field,value){
+  const tk=S.tickets.find(t=>t.id===id)||{};
+  try{
+    await api('PUT',`/api/tickets/${id}`,{...tk,[field]:value,client_id:tk.client_id,contact_id:tk.contact_id||null});
+    if(S.tickets.find(t=>t.id===id))S.tickets.find(t=>t.id===id)[field]=value;
+    renderTickets();renderKanban();updateStats();
+    showToast('Updated','success');
+  }catch(e){showToast(e.message,'error');}
+}
+window.quickUpdate=quickUpdate;
+
+async function deleteNote(noteId, ticketId) {
+  if (!confirm("Delete this note?")) return;
+  try {
+    await api("DELETE", `/api/tickets/${ticketId}/notes/${noteId}`);
+    await selectTicket(ticketId);
+    showToast("Note deleted", "success");
+  } catch (e) {
+    showToast(e.message, "error");
+  }
+}
+window.deleteNote = deleteNote;
+
+function renderNotes(notes){
+  document.getElementById('d-notes').innerHTML=!notes.length
+    ?`<div class="empty-state"><div class="empty-icon">💬</div><div>No notes yet</div></div>`
+    :notes.map(n=>`
+      <div class="note-card ${n.is_client_facing?'client':'internal'}">
+        <div class="note-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge ${n.is_client_facing?'badge-client':'badge-internal'}">${n.is_client_facing?'📧 Client-Facing':'🔒 Internal'}</span>
+            <span class="note-author">${esc(n.full_name||n.username)}</span>
+          </div>
+          <span class="note-time">${timeAgo(n.created_at)}</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteNote('${n.id}', '${S.selectedTicketId}')" style="font-size:10px;padding:2px 6px;">🗑</button>
+        </div>
+        <div class="note-body">${esc(n.note)}</div>
+      </div>`).join('');
+}
+function renderTimeEntries(entries){
+  const total=entries.reduce((s,e)=>s+(e.hours||0),0);
+  document.getElementById('d-time').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:11px;color:var(--text3);">Total logged</span>
+      <span style="font-size:18px;font-weight:700;font-family:'Syne',sans-serif;color:var(--accent);">${total.toFixed(2)} hrs</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="openTimeModal()" style="margin-bottom:12px;">+ Log Time</button>
+    ${!entries.length?`<div class="empty-state" style="min-height:80px;"><div>No time logged yet</div></div>`
+    :entries.map(e=>`<div class="time-entry-row">
+      <span style="color:var(--text3);">${e.entry_date}</span>
+      <span style="color:var(--accent);font-weight:600;">${e.hours}h</span>
+      <span style="color:var(--text2);">${esc(e.description||'—')}</span>
+      <span style="color:var(--text3);font-size:10px;">${esc(e.username)}</span>
+    </div>`).join('')}`;
+}
+
+// Detail tabs
+document.querySelectorAll('.detail-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.detail-tab-content').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`dtab-${tab.dataset.dtab}`)?.classList.add('active');
+  });
+});
+
+// Note type tabs
+document.querySelectorAll('.note-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.note-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    S.noteType=tab.dataset.notetab;
+    document.getElementById('note-type-hint').textContent=S.noteType==='client'?'Will be visible to client':'Visible to team only';
+  });
+});
+
+document.getElementById('btn-add-note').addEventListener('click',async()=>{
+  const note=document.getElementById('note-input').value.trim();
+  if(!note||!S.selectedTicketId)return;
+  try{
+    await api('POST',`/api/tickets/${S.selectedTicketId}/notes`,{note,is_client_facing:S.noteType==='client'});
+    document.getElementById('note-input').value='';
+    await selectTicket(S.selectedTicketId);
+    showToast('Note posted','success');
+  }catch(e){showToast(e.message,'error');}
+});
+
+document.getElementById('btn-close-detail').addEventListener('click',()=>{
+  S.selectedTicketId=null;
+  document.getElementById('detail-panel').classList.add('hidden');
+  renderTickets();
+});
+
+document.getElementById('btn-edit-ticket').addEventListener('click',()=>{
+  const tk=S.tickets.find(t=>t.id===S.selectedTicketId);
+  if(tk)openEditTicketModal(tk);
+});
+
+document.getElementById('btn-delete-ticket').addEventListener('click',()=>{
+  if(!S.selectedTicketId)return;
+  showConfirm(`Delete ticket ${S.selectedTicketId}? This cannot be undone.`,async()=>{
+    try{
+      await api('DELETE',`/api/tickets/${S.selectedTicketId}`);
+      S.tickets=S.tickets.filter(t=>t.id!==S.selectedTicketId);
+      S.selectedTicketId=null;
+      document.getElementById('detail-panel').classList.add('hidden');
+      renderTickets();renderKanban();updateStats();
+      showToast('Ticket deleted','info');
+    }catch(e){showToast(e.message,'error');}
+  });
+});
+
+function openTimeModal(){
+  document.getElementById('te-hours').value='';
+  document.getElementById('te-desc').value='';
+  document.getElementById('te-date').value=new Date().toISOString().split('T')[0];
+  openModal('modal-time');
+}
+window.openTimeModal=openTimeModal;
+document.getElementById('btn-submit-time').addEventListener('click',async()=>{
+  const hours=parseFloat(document.getElementById('te-hours').value);
+  const entry_date=document.getElementById('te-date').value;
+  if(!hours||!entry_date){showToast('Hours and date required','error');return;}
+  try{
+    await api('POST',`/api/tickets/${S.selectedTicketId}/time`,{hours,description:document.getElementById('te-desc').value,entry_date});
+    closeModal('modal-time');await selectTicket(S.selectedTicketId);showToast('Time logged','success');
+  }catch(e){showToast(e.message,'error');}
+});
+
+// ===================== TICKET MODAL =====================
+document.getElementById('btn-new-ticket').addEventListener('click',()=>{
+  S.editingTicketId=null;
+  document.getElementById('ticket-modal-title').textContent='New Ticket';
+  document.getElementById('btn-submit-ticket').textContent='Create Ticket';
+  ['t-title','t-description'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('t-status').value='New';
+  document.getElementById('t-priority').value='Medium';
+  document.getElementById('t-client').value='';
+  document.getElementById('t-contact').innerHTML='<option value="">— None —</option>';
+  document.getElementById('t-assignee').value='';
+  document.getElementById('t-category').value='General';
+  openModal('modal-ticket');
+});
+
+document.getElementById('t-client').addEventListener('change',async e=>{
+  const id=e.target.value;
+  document.getElementById('t-contact').innerHTML='<option value="">— None —</option>';
+  if(!id)return;
+  const cts=await api('GET',`/api/clients/${id}/contacts`).catch(()=>[]);
+  (cts||[]).forEach(c=>document.getElementById('t-contact').innerHTML+=`<option value="${c.id}">${esc(c.name)}${c.is_primary?' ★':''}</option>`);
+});
+
+function openEditTicketModal(tk){
+  S.editingTicketId=tk.id;
+  document.getElementById('ticket-modal-title').textContent=`Edit ${tk.id}`;
+  document.getElementById('btn-submit-ticket').textContent='Save Changes';
+  document.getElementById('t-title').value=tk.title||'';
+  document.getElementById('t-description').value=tk.description||'';
+  document.getElementById('t-status').value=tk.status||'New';
+  document.getElementById('t-priority').value=tk.priority||'Medium';
+  document.getElementById('t-client').value=tk.client_id||'';
+  document.getElementById('t-assignee').value=tk.assigned_to||'';
+  document.getElementById('t-category').value=tk.category||'General';
+  api('GET',`/api/clients/${tk.client_id}/contacts`).then(cts=>{
+    document.getElementById('t-contact').innerHTML='<option value="">— None —</option>';
+    (cts||[]).forEach(c=>document.getElementById('t-contact').innerHTML+=`<option value="${c.id}" ${c.id===tk.contact_id?'selected':''}>${esc(c.name)}</option>`);
+  }).catch(()=>{});
+  openModal('modal-ticket');
+}
+
+document.getElementById('btn-submit-ticket').addEventListener('click',async()=>{
+  const title=document.getElementById('t-title').value.trim();
+  const description=document.getElementById('t-description').value.trim();
+  const client_id=document.getElementById('t-client').value;
+  if(!title){showToast('Title required','error');return;}
+  if(!client_id){showToast('Client required','error');return;}
+  if(!description){showToast('Description required','error');return;}
+  const payload={title,description,client_id:parseInt(client_id),
+    contact_id:document.getElementById('t-contact').value||null,
+    status:document.getElementById('t-status').value,
+    priority:document.getElementById('t-priority').value,
+    assigned_to:document.getElementById('t-assignee').value||null,
+    category:document.getElementById('t-category').value};
+  try{
+    if(S.editingTicketId){
+      const up=await api('PUT',`/api/tickets/${S.editingTicketId}`,payload);
+      const i=S.tickets.findIndex(t=>t.id===S.editingTicketId);
+      if(i!==-1)S.tickets[i]=up;
+      showToast('Ticket updated','success');
+      closeModal('modal-ticket');
+      if(S.selectedTicketId===S.editingTicketId)selectTicket(S.editingTicketId);
+    }else{
+      const nt=await api('POST','/api/tickets',payload);
+      S.tickets.unshift(nt);
+      showToast(`Created ${nt.id}`,'success');
+      closeModal('modal-ticket');
+      selectTicket(nt.id);
+    }
+    renderTickets();renderKanban();updateStats();
+  }catch(e){showToast(e.message,'error');}
+});
+
+// ===================== CLIENTS =====================
+function renderClients(){
+  const search=document.getElementById('client-search').value.toLowerCase();
+  const clients=S.clients.filter(c=>!search||c.company_name.toLowerCase().includes(search));
+  const container=document.getElementById('clients-container');
+  const cols=['#f0b429','#58a6ff','#3fb950','#bc8cff','#ffa657','#39d353','#f85149','#ff7b72'];
+  if(S.clientView==='grid'){
+    container.className='grid-view';
+    container.innerHTML=!clients.length?`<div class="empty-state"><div class="empty-icon">🏢</div><div>No clients found</div></div>`:
+    clients.map((c,i)=>{
+      const tc=S.tickets.filter(t=>t.client_id===c.id).length;
+      const oc=S.tickets.filter(t=>t.client_id===c.id&&['New','Open','In Progress'].includes(t.status)).length;
+      const cc=S.contacts.filter(ct=>ct.client_id===c.id).length;
+      const col=cols[i%cols.length];
+      return `<div class="client-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div class="client-avatar" style="background:${col};">${c.company_name[0]}</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:600;">${esc(c.company_name)}</div>
+            <div style="font-size:10px;color:var(--text3);">${c.city?`${esc(c.city)}, ${esc(c.state||'')}`:esc(c.phone||'')}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:14px;">
+          <div><span style="font-size:18px;font-weight:700;font-family:'Syne',sans-serif;color:var(--accent);display:block;">${tc}</span><span style="color:var(--text3);font-size:10px;">Tickets</span></div>
+          <div><span style="font-size:18px;font-weight:700;font-family:'Syne',sans-serif;color:${oc>0?'var(--blue)':'var(--text3)'};display:block;">${oc}</span><span style="color:var(--text3);font-size:10px;">Open</span></div>
+          <div><span style="font-size:18px;font-weight:700;font-family:'Syne',sans-serif;display:block;">${cc}</span><span style="color:var(--text3);font-size:10px;">Contacts</span></div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-sm" onclick="filterByClient(${c.id})">View Tickets</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditClientModal(${c.id})">Edit</button>
+        </div>
+      </div>`;
+    }).join('');
+  }else{
+    container.className='';
+    container.style.cssText='flex:1;overflow-y:auto;';
+    container.innerHTML=`
+      <div class="data-row thead" style="grid-template-columns:1fr 140px 160px 70px 60px 60px 130px;">
+        <div>Company</div><div>Location</div><div>Phone</div><div>Tickets</div><div>Open</div><div>Contacts</div><div>Actions</div>
+      </div>
+      ${clients.map(c=>{
+        const tc=S.tickets.filter(t=>t.client_id===c.id).length;
+        const oc=S.tickets.filter(t=>t.client_id===c.id&&['New','Open','In Progress'].includes(t.status)).length;
+        const cc=S.contacts.filter(ct=>ct.client_id===c.id).length;
+        return `<div class="data-row" style="grid-template-columns:1fr 140px 160px 70px 60px 60px 130px;">
+          <div style="font-weight:600;">${esc(c.company_name)}</div>
+          <div style="color:var(--text2);">${c.city||''}${c.city&&c.state?', ':''}${c.state||''}</div>
+          <div style="color:var(--text3);">${c.phone||'—'}</div>
+          <div>${tc}</div>
+          <div style="color:${oc>0?'var(--blue)':'var(--text3)'};">${oc}</div>
+          <div>${cc}</div>
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-ghost btn-sm" onclick="filterByClient(${c.id})">Tickets</button>
+            <button class="btn btn-ghost btn-sm" onclick="openEditClientModal(${c.id})">Edit</button>
+          </div>
+        </div>`;
+      }).join('')}`;
+  }
+}
+function filterByClient(clientId){
+  S.filters.client=clientId.toString();
+  document.getElementById('filter-client').value=clientId.toString();
+  navigateTo('tickets');renderTickets();renderKanban();
+}
+window.filterByClient=filterByClient;
+document.getElementById('client-search').addEventListener('input',()=>renderClients());
+document.getElementById('client-view-grid').addEventListener('click',()=>{S.clientView='grid';document.getElementById('client-view-grid').classList.add('active');document.getElementById('client-view-list').classList.remove('active');renderClients();});
+document.getElementById('client-view-list').addEventListener('click',()=>{S.clientView='list';document.getElementById('client-view-list').classList.add('active');document.getElementById('client-view-grid').classList.remove('active');renderClients();});
+
+document.getElementById('btn-new-client').addEventListener('click',()=>{
+  S.editingClientId=null;
+  document.getElementById('client-modal-title').textContent='New Client';
+  document.getElementById('btn-submit-client').textContent='Create Client';
+  ['c-name','c-phone','c-website','c-address','c-city','c-state','c-zip','c-notes'].forEach(id=>document.getElementById(id).value='');
+  openModal('modal-client');
+});
+function openEditClientModal(id){
+  const c=S.clients.find(x=>x.id===id);if(!c)return;
+  S.editingClientId=id;
+  document.getElementById('client-modal-title').textContent=`Edit ${c.company_name}`;
+  document.getElementById('btn-submit-client').textContent='Save Changes';
+  document.getElementById('c-name').value=c.company_name||'';
+  document.getElementById('c-phone').value=c.phone||'';
+  document.getElementById('c-website').value=c.website||'';
+  document.getElementById('c-address').value=c.address||'';
+  document.getElementById('c-city').value=c.city||'';
+  document.getElementById('c-state').value=c.state||'';
+  document.getElementById('c-zip').value=c.zip||'';
+  document.getElementById('c-notes').value=c.notes||'';
+  openModal('modal-client');
+}
+window.openEditClientModal=openEditClientModal;
+document.getElementById('btn-submit-client').addEventListener('click',async()=>{
+  const company_name=document.getElementById('c-name').value.trim();
+  if(!company_name){showToast('Company name required','error');return;}
+  const payload={company_name,phone:document.getElementById('c-phone').value,website:document.getElementById('c-website').value,
+    address:document.getElementById('c-address').value,city:document.getElementById('c-city').value,
+    state:document.getElementById('c-state').value,zip:document.getElementById('c-zip').value,notes:document.getElementById('c-notes').value};
+  try{
+    if(S.editingClientId){
+      const up=await api('PUT',`/api/clients/${S.editingClientId}`,payload);
+      const i=S.clients.findIndex(c=>c.id===S.editingClientId);if(i!==-1)S.clients[i]=up;
+      showToast('Client updated','success');
+    }else{
+      const nc=await api('POST','/api/clients',payload);S.clients.push(nc);
+      showToast('Client created','success');
+    }
+    closeModal('modal-client');populateDropdowns();renderClients();
+  }catch(e){showToast(e.message,'error');}
+});
+
+// ===================== CONTACTS =====================
+function renderContacts(){
+  const search=document.getElementById('contact-search').value.toLowerCase();
+  const cf=document.getElementById('contact-filter-client').value;
+  const contacts=S.contacts.filter(c=>{
+    const s=`${c.name} ${c.email||''} ${c.title||''}`.toLowerCase();
+    if(search&&!s.includes(search))return false;
+    if(cf&&c.client_id!=cf)return false;
+    return true;
+  });
+  document.getElementById('contact-rows').innerHTML=!contacts.length
+    ?`<div class="empty-state"><div class="empty-icon">👥</div><div>No contacts found</div></div>`
+    :contacts.map(c=>`
+      <div class="data-row" style="grid-template-columns:1fr 180px 140px 160px 130px 130px;">
+        <div style="font-weight:500;">${esc(c.name)} ${c.is_primary?'<span style="color:var(--accent);font-size:10px;">★</span>':''}</div>
+        <div style="color:var(--blue);">${esc(c.email||'—')}</div>
+        <div style="color:var(--text3);">${esc(c.phone||c.mobile||'—')}</div>
+        <div>${esc(c.client_name||'—')}</div>
+        <div style="color:var(--text2);">${esc(c.title||'—')}</div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-ghost btn-sm" onclick="quickNewTicket(${c.client_id},${c.id})">+ Ticket</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditContactModal(${c.id},${c.client_id})">Edit</button>
+        </div>
+      </div>`).join('');
+}
+document.getElementById('contact-search').addEventListener('input',()=>renderContacts());
+document.getElementById('contact-filter-client').addEventListener('change',()=>renderContacts());
+
+document.getElementById('btn-new-contact').addEventListener('click',()=>{
+  S.editingContactId=null;
+  document.getElementById('contact-modal-title').textContent='New Contact';
+  ['ct-name','ct-title','ct-email','ct-phone','ct-mobile','ct-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ct-primary').checked=false;
+  document.getElementById('ct-client').value='';
+  openModal('modal-contact');
+});
+function openEditContactModal(id,clientId){
+  const c=S.contacts.find(x=>x.id===id);if(!c)return;
+  S.editingContactId=id;S.editingContactClientId=clientId;
+  document.getElementById('contact-modal-title').textContent=`Edit ${c.name}`;
+  document.getElementById('ct-name').value=c.name||'';
+  document.getElementById('ct-title').value=c.title||'';
+  document.getElementById('ct-email').value=c.email||'';
+  document.getElementById('ct-phone').value=c.phone||'';
+  document.getElementById('ct-mobile').value=c.mobile||'';
+  document.getElementById('ct-notes').value=c.notes||'';
+  document.getElementById('ct-primary').checked=!!c.is_primary;
+  document.getElementById('ct-client').value=clientId;
+  openModal('modal-contact');
+}
+window.openEditContactModal=openEditContactModal;
+document.getElementById('btn-submit-contact').addEventListener('click',async()=>{
+  const name=document.getElementById('ct-name').value.trim();
+  const clientId=document.getElementById('ct-client').value;
+  if(!name){showToast('Name required','error');return;}
+  if(!clientId){showToast('Client required','error');return;}
+  const payload={name,title:document.getElementById('ct-title').value,email:document.getElementById('ct-email').value,
+    phone:document.getElementById('ct-phone').value,mobile:document.getElementById('ct-mobile').value,
+    notes:document.getElementById('ct-notes').value,is_primary:document.getElementById('ct-primary').checked?1:0};
+  try{
+    const cname=S.clients.find(c=>c.id==clientId)?.company_name;
+    if(S.editingContactId){
+      const up=await api('PUT',`/api/clients/${clientId}/contacts/${S.editingContactId}`,payload);
+      const i=S.contacts.findIndex(c=>c.id===S.editingContactId);
+      if(i!==-1)S.contacts[i]={...up,client_id:parseInt(clientId),client_name:cname};
+    }else{
+      const nc=await api('POST',`/api/clients/${clientId}/contacts`,payload);
+      S.contacts.push({...nc,client_id:parseInt(clientId),client_name:cname});
+    }
+    closeModal('modal-contact');renderContacts();renderClients();showToast('Contact saved','success');
+  }catch(e){showToast(e.message,'error');}
+});
+
+function quickNewTicket(clientId,contactId){
+  S.editingTicketId=null;
+  document.getElementById('ticket-modal-title').textContent='New Ticket';
+  document.getElementById('btn-submit-ticket').textContent='Create Ticket';
+  ['t-title','t-description'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('t-status').value='New';
+  document.getElementById('t-priority').value='Medium';
+  document.getElementById('t-client').value=clientId;
+  api('GET',`/api/clients/${clientId}/contacts`).then(cts=>{
+    document.getElementById('t-contact').innerHTML='<option value="">— None —</option>';
+    (cts||[]).forEach(c=>document.getElementById('t-contact').innerHTML+=`<option value="${c.id}" ${c.id===contactId?'selected':''}>${esc(c.name)}</option>`);
+  }).catch(()=>{});
+  navigateTo('tickets');openModal('modal-ticket');
+}
+window.quickNewTicket=quickNewTicket;
+
+// ===================== STATS =====================
+async function loadStats(){
+  const data=await api('GET','/api/stats').catch(()=>null);
+  if(!data)return;
+  const backupData = await api("GET", "/api/backup/status").catch(() => ({ latest: null, count: 0 }));
+  const{summary,byStatus,byPriority,byCategory,topClients}=data;
+  const sc=["var(--blue)","var(--green)","var(--red)","var(--orange)","var(--purple)"];
+  const sl=["Total Tickets","Open / Active","Resolved","Critical Active","Last Backup"];
+  const sv=[summary.total,summary.open,summary.resolved,summary.critical,backupData.latest ? timeAgo(backupData.latest.date) : 'Never'];
+  document.getElementById('stats-summary').innerHTML=sv.map((v,i)=>`<div class="stat-card"><div class="stat-card-num" style="color:${sc[i]}">${v}</div><div class="stat-card-label">${sl[i]}</div></div>`).join('');
+  const bar=(title,data,colors)=>{
+    const max=Math.max(...data.map(d=>d.count),1);
+    return `<div class="chart-card"><div class="chart-title">${title}</div>${data.map((d,i)=>`
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${esc(d.status||d.priority||d.category||d.client)}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.round(d.count/max*100)}%;background:${colors[i%colors.length]}"></div></div>
+        <div class="chart-bar-val">${d.count}</div>
+      </div>`).join('')}</div>`;
+  };
+  document.getElementById('stats-charts').innerHTML=
+    bar('By Status',byStatus,['var(--blue)','var(--blue)','var(--orange)','var(--green)','var(--text3)'])+
+    bar('By Priority',byPriority,['var(--red)','#ff7b72','var(--orange)','var(--green)'])+
+    bar('By Category',byCategory,['var(--accent)','var(--blue)','var(--purple)','var(--teal)','var(--orange)','var(--green)','var(--red)','var(--text2)'])+
+    bar('Top Clients',topClients,['var(--accent)','var(--blue)','var(--purple)','var(--teal)','var(--orange)','var(--green)','var(--red)','var(--text2)']);
+}
+
+// ===================== USERS =====================
+function renderUsers(){
+  document.getElementById('user-rows').innerHTML=!S.users.length
+    ?`<div class="empty-state"><div class="empty-icon">👤</div><div>No users</div></div>`
+    :S.users.map(u=>`
+      <div class="data-row" style="grid-template-columns:130px 1fr 200px 100px;">
+        <div style="color:var(--accent);font-weight:600;">${esc(u.username)}</div>
+        <div>${esc(u.full_name||'—')}</div>
+        <div style="color:var(--blue);">${esc(u.email||'—')}</div>
+        <div><span class="badge ${u.role==='admin'?'badge-admin':'badge-tech'}">${u.role}</span></div>
+      </div>`).join('');
+}
+document.getElementById('btn-new-user').addEventListener('click',()=>{
+  ['u-username','u-password','u-fullname','u-email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('u-role').value='technician';
+  openModal('modal-user');
+});
+document.getElementById('btn-submit-user').addEventListener('click',async()=>{
+  const username=document.getElementById('u-username').value.trim();
+  const password=document.getElementById('u-password').value;
+  if(!username||!password){showToast('Username and password required','error');return;}
+  try{
+    const u=await api('POST','/api/users',{username,password,full_name:document.getElementById('u-fullname').value,email:document.getElementById('u-email').value,role:document.getElementById('u-role').value});
+    S.users.push(u);closeModal('modal-user');renderUsers();populateDropdowns();showToast('User created','success');
+  }catch(e){showToast(e.message,'error');}
+});
+
+// ===================== PRESETS =====================
+function renderPresets(){
+  const bar=document.getElementById('preset-bar');
+  const nav=document.getElementById('nav-presets');
+  if(!S.presets.length){bar.innerHTML=`<span style="font-size:11px;color:var(--text3);">No saved presets · use 💾 Save to create one</span>`;nav.innerHTML='';return;}
+  bar.innerHTML=S.presets.map((p,i)=>`<button class="preset-btn" onclick="applyPreset(${i})">${esc(p.name)}</button>`).join('');
+  nav.innerHTML=S.presets.map((p,i)=>`
+    <div class="nav-item" onclick="applyPreset(${i})">
+      <span class="nav-icon">🔖</span>${esc(p.name)}
+      <button onclick="event.stopPropagation();deletePreset(${i})" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:3px;" title="Delete">✕</button>
+    </div>`).join('');
+}
+window.deletePreset=(i)=>{S.presets.splice(i,1);localStorage.setItem('sitsys_presets',JSON.stringify(S.presets));renderPresets();showToast('Preset deleted','info');};
+window.applyPreset=(i)=>{
+  const p=S.presets[i];if(!p)return;
+  S.filters={...p.filters};
+  document.getElementById('ticket-search').value=S.filters.search||'';
+  document.getElementById('filter-status').value=S.filters.status||'';
+  document.getElementById('filter-priority').value=S.filters.priority||'';
+  document.getElementById('filter-client').value=S.filters.client||'';
+  document.getElementById('filter-assignee').value=S.filters.assignee||'';
+  navigateTo('tickets');renderTickets();renderKanban();
+  showToast(`Applied: ${p.name}`,'info');
+};
+document.getElementById('btn-save-preset').addEventListener('click',()=>{
+  const f=S.filters;const parts=[];
+  if(f.search)parts.push(`Search: "${f.search}"`);
+  if(f.status)parts.push(`Status: ${f.status}`);
+  if(f.priority)parts.push(`Priority: ${f.priority}`);
+  if(f.client)parts.push(`Client: ${S.clients.find(c=>c.id==f.client)?.company_name||f.client}`);
+  if(f.assignee==='__none__')parts.push('Unassigned only');
+  else if(f.assignee)parts.push(`Assignee: ${f.assignee}`);
+  document.getElementById('preset-preview').innerHTML=parts.length?parts.map(p=>`• ${p}`).join('<br>'):'• All tickets (no active filters)';
+  document.getElementById('preset-name').value='';
+  openModal('modal-preset');
+});
+document.getElementById('btn-confirm-preset').addEventListener('click',()=>{
+  const name=document.getElementById('preset-name').value.trim();
+  if(!name){showToast('Name required','error');return;}
+  S.presets.push({name,filters:{...S.filters}});
+  localStorage.setItem('sitsys_presets',JSON.stringify(S.presets));
+  closeModal('modal-preset');renderPresets();showToast(`Preset "${name}" saved`,'success');
+});
+
+// ===================== NAVIGATION =====================
+function navigateTo(page){
+  S.currentPage=page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.classList.remove('active'));
+  document.getElementById(`page-${page}`)?.classList.add('active');
+  document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+  const titles={tickets:'All Tickets',clients:'Clients',contacts:'Contacts',stats:'Statistics',users:'User Management'};
+  document.getElementById('page-title').textContent=titles[page]||page;
+  ['btn-new-ticket','btn-new-client','btn-new-contact','btn-new-user'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  const pageBtn={tickets:'btn-new-ticket',clients:'btn-new-client',contacts:'btn-new-contact',users:'btn-new-user'};
+  if(pageBtn[page])document.getElementById(pageBtn[page]).classList.remove('hidden');
+  document.getElementById('topbar-stats').classList.toggle('hidden',page!=='tickets');
+  if(page==='stats')loadStats();
+}
+document.querySelectorAll('.nav-item[data-page]').forEach(item=>item.addEventListener('click',()=>navigateTo(item.dataset.page)));
+
+document.getElementById('nav-my-tickets').addEventListener('click',()=>{
+  const me=S.currentUser?.username;if(!me)return;
+  S.filters={...S.filters,assignee:me};document.getElementById('filter-assignee').value=me;
+  navigateTo('tickets');document.getElementById('page-title').textContent='My Tickets';renderTickets();renderKanban();
+});
+document.getElementById('nav-unassigned').addEventListener('click',()=>{
+  S.filters={...S.filters,assignee:'__none__'};document.getElementById('filter-assignee').value='__none__';
+  navigateTo('tickets');document.getElementById('page-title').textContent='Unassigned';renderTickets();renderKanban();
+});
+document.getElementById('nav-critical').addEventListener('click',()=>{
+  S.filters={...S.filters,priority:'Critical',status:''};
+  document.getElementById('filter-priority').value='Critical';document.getElementById('filter-status').value='';
+  navigateTo('tickets');document.getElementById('page-title').textContent='Critical Tickets';renderTickets();renderKanban();
+});
+document.getElementById('nav-new-status').addEventListener('click',()=>{
+  S.filters={...S.filters,status:'New'};document.getElementById('filter-status').value='New';
+  navigateTo('tickets');document.getElementById('page-title').textContent='New Tickets';renderTickets();renderKanban();
+});
+
+// ===================== FILTERS =====================
+document.getElementById('ticket-search').addEventListener('input',e=>{S.filters.search=e.target.value;renderTickets();renderKanban();});
+document.getElementById('filter-status').addEventListener('change',e=>{S.filters.status=e.target.value;renderTickets();renderKanban();});
+document.getElementById('filter-priority').addEventListener('change',e=>{S.filters.priority=e.target.value;renderTickets();renderKanban();});
+document.getElementById('filter-client').addEventListener('change',e=>{S.filters.client=e.target.value;renderTickets();renderKanban();});
+document.getElementById('filter-assignee').addEventListener('change',e=>{S.filters.assignee=e.target.value;renderTickets();renderKanban();});
+function clearFilters(){S.filters={search:'',status:'',priority:'',client:'',assignee:''};['ticket-search','filter-status','filter-priority','filter-client','filter-assignee'].forEach(id=>{document.getElementById(id).value='';});renderTickets();renderKanban();}
+window.clearFilters=clearFilters;
+
+// ===================== VIEW TOGGLES =====================
+document.getElementById('view-list').addEventListener('click',()=>{
+  S.ticketView='list';document.getElementById('view-list').classList.add('active');document.getElementById('view-kanban').classList.remove('active');
+  document.getElementById('list-view').style.display='flex';document.getElementById('kanban-view').style.display='none';
+});
+document.getElementById('view-kanban').addEventListener('click',()=>{
+  S.ticketView='kanban';document.getElementById('view-kanban').classList.add('active');document.getElementById('view-list').classList.remove('active');
+  document.getElementById('kanban-view').style.display='flex';document.getElementById('list-view').style.display='none';renderKanban();
+});
+
+// ===================== MODAL UTILS =====================
+function openModal(id){document.getElementById(id)?.classList.remove('hidden');}
+function closeModal(id){document.getElementById(id)?.classList.add('hidden');}
+window.closeModal=closeModal;
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.add('hidden');}));
+
+let confirmCb=null;
+function showConfirm(msg,cb){document.getElementById('confirm-msg').textContent=msg;confirmCb=cb;openModal('modal-confirm');}
+document.getElementById('btn-confirm-action').addEventListener('click',()=>{closeModal('modal-confirm');if(confirmCb){confirmCb();confirmCb=null;}});
+
+// ===================== TOAST =====================
+function showToast(msg,type='info'){
+  const c=document.getElementById('toast-container');
+  const t=document.createElement('div');
+  const icons={success:'✓',error:'✕',info:'ℹ'};
+  const colors={success:'var(--green)',error:'var(--red)',info:'var(--blue)'};
+  t.className=`toast ${type}`;
+  t.innerHTML=`<span style="color:${colors[type]};font-weight:700;">${icons[type]}</span> ${esc(msg)}`;
+  c.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},3500);
+}
+
+// ===================== BADGES & UTILS =====================
+function statusBadge(s){const m={'New':'badge-new','Open':'badge-open','In Progress':'badge-inprogress','Resolved':'badge-resolved','Closed':'badge-closed'};return `<span class="badge ${m[s]||'badge-open'}">${esc(s)}</span>`;}
+function priorityBadge(p){const m={'Critical':'badge-critical','High':'badge-high','Medium':'badge-medium','Low':'badge-low'};return `<span class="badge ${m[p]||'badge-medium'}">${esc(p)}</span>`;}
+function timeAgo(ts){if(!ts)return '—';const d=Date.now()-new Date(ts).getTime();if(d<60000)return'just now';if(d<3600000)return`${Math.floor(d/60000)}m ago`;if(d<86400000)return`${Math.floor(d/3600000)}h ago`;if(d<604800000)return`${Math.floor(d/86400000)}d ago`;return new Date(ts).toLocaleDateString();}
+function esc(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ===================== INIT =====================
+checkAuth();
+</script>
+</body>
+</html>

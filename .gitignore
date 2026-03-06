@@ -1,0 +1,29 @@
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Backups
+backups/
+*.gz
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+*.local
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp

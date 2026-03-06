@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSP Ticket Management System</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a2332;
+            --bg-card: #1e293b;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #334155;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+            --glow-blue: 0 0 20px rgba(59, 130, 246, 0.3);
+            --glow-purple: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .login-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-logo-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 2.5rem;
+            box-shadow: var(--glow-blue);
+            margin-bottom: 1rem;
+        }
+
+        .login-logo h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-logo p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.25rem;
+            box-shadow: var(--glow-blue);
+        }
+
+        .logo-text h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            padding: 0.5rem;
+            border-radius: 12px;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            box-shadow: var(--glow-blue);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            box-shadow: var(--glow-blue);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .btn-danger {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--accent-success);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .ticket-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .ticket-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ticket-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-primary);
+            transition: width 0.3s ease;
+        }
+
+        .ticket-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-primary);
+        }
+
+        .ticket-card:hover::before {
+            width: 100%;
+            opacity: 0.1;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .ticket-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .ticket-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .ticket-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .priority-critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .priority-high { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .priority-medium { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .priority-low { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        .status-new { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .status-open { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .status-in-progress { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .status-waiting { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .status-resolved { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .status-closed { background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.3); }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent);
+            border-radius: 50%;
+            transform: translate(30%, -30%);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .filters {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .client-badge {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 2;
+            min-width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        /* Notes Section Styles */
+        .notes-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .notes-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        .note-item {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .note-author {
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .note-timestamp {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .note-content {
+            color: var(--text-primary);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .note-form {
+            background: var(--bg-tertiary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .note-input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .note-input-wrapper .form-textarea {
+            flex: 1;
+            min-height: 80px;
+        }
+
+        .empty-notes {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const api = {
+            async fetch(url, options = {}) {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers,
+                    },
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Request failed');
+                }
+                
+                return response.json();
+            },
+            
+            login: (username, password) => api.fetch('/api/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password }),
+            }),
+            
+            logout: () => api.fetch('/api/logout', { method: 'POST' }),
+            checkAuth: () => api.fetch('/api/auth/check'),
+            getTickets: () => api.fetch('/api/tickets'),
+            getTicket: (id) => api.fetch(`/api/tickets/${id}`),
+            
+            createTicket: (data) => api.fetch('/api/tickets', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            }),
+            
+            updateTicket: (id, data) => api.fetch(`/api/tickets/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(data),
+            }),
+            
+            deleteTicket: (id) => api.fetch(`/api/tickets/${id}`, {
+                method: 'DELETE',
+            }),
+            
+            addNote: (ticketId, note) => api.fetch(`/api/tickets/${ticketId}/notes`, {
+                method: 'POST',
+                body: JSON.stringify({ note }),
+            }),
+            
+            getStats: () => api.fetch('/api/stats'),
+            getUsers: () => api.fetch('/api/users'),
+        };
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                checkAuthentication();
+            }, []);
+
+            const checkAuthentication = async () => {
+                try {
+                    const result = await api.checkAuth();
+                    if (result.authenticated) {
+                        setUser(result.user);
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleLogin = async (username, password) => {
+                const result = await api.login(username, password);
+                setUser(result.user);
+            };
+
+            const handleLogout = async () => {
+                await api.logout();
+                setUser(null);
+            };
+
+            if (loading) {
+                return <div className="loading">Loading...</div>;
+            }
+
+            if (!user) {
+                return <LoginPage onLogin={handleLogin} />;
+            }
+
+            return <MainApp user={user} onLogout={handleLogout} />;
+        }
+
+        function LoginPage({ onLogin }) {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+
+                try {
+                    await onLogin(username, password);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="login-container">
+                    <div className="login-box">
+                        <div className="login-logo">
+                            <div className="login-logo-icon">T</div>
+                            <h1>MSP Ticket Manager</h1>
+                            <p>Cloud Edition</p>
+                        </div>
+
+                        {error && (
+                            <div className="alert alert-error">{error}</div>
+                        )}
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Username</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <input
+                                    type="password"
+                                    className="form-input"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+                                {loading ? 'Signing in...' : 'Sign In'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        function MainApp({ user, onLogout }) {
+            const [activeTab, setActiveTab] = useState('tickets');
+            const [tickets, setTickets] = useState([]);
+            const [stats, setStats] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [showModal, setShowModal] = useState(false);
+            const [editingTicket, setEditingTicket] = useState(null);
+            const [viewingTicket, setViewingTicket] = useState(null);
+            const [filterStatus, setFilterStatus] = useState('all');
+            const [filterPriority, setFilterPriority] = useState('all');
+            const [searchQuery, setSearchQuery] = useState('');
+
+            const statuses = ['New', 'Open', 'In Progress', 'Waiting', 'Resolved', 'Closed'];
+            const priorities = ['Low', 'Medium', 'High', 'Critical'];
+            const categories = ['Hardware', 'Software', 'Network', 'Security', 'Email', 'Access', 'Other'];
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            const loadData = async () => {
+                try {
+                    const [ticketsData, statsData] = await Promise.all([
+                        api.getTickets(),
+                        api.getStats()
+                    ]);
+                    setTickets(ticketsData);
+                    setStats(statsData);
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleCreateTicket = async (ticketData) => {
+                try {
+                    await api.createTicket(ticketData);
+                    await loadData();
+                    setShowModal(false);
+                } catch (error) {
+                    alert('Failed to create ticket: ' + error.message);
+                }
+            };
+
+            const handleUpdateTicket = async (ticketData) => {
+                try {
+                    await api.updateTicket(editingTicket.id, ticketData);
+                    await loadData();
+                    setEditingTicket(null);
+                    setShowModal(false);
+                    if (viewingTicket && viewingTicket.id === editingTicket.id) {
+                        const updated = await api.getTicket(editingTicket.id);
+                        setViewingTicket(updated);
+                    }
+                } catch (error) {
+                    alert('Failed to update ticket: ' + error.message);
+                }
+            };
+
+            const handleDeleteTicket = async (ticketId) => {
+                if (confirm('Are you sure you want to delete this ticket?')) {
+                    try {
+                        await api.deleteTicket(ticketId);
+                        await loadData();
+                        setViewingTicket(null);
+                    } catch (error) {
+                        alert('Failed to delete ticket: ' + error.message);
+                    }
+                }
+            };
+
+            const handleStatusChange = async (ticketId, newStatus) => {
+                try {
+                    const ticket = tickets.find(t => t.id === ticketId);
+                    await api.updateTicket(ticketId, { ...ticket, status: newStatus });
+                    await loadData();
+                    if (viewingTicket && viewingTicket.id === ticketId) {
+                        const updated = await api.getTicket(ticketId);
+                        setViewingTicket(updated);
+                    }
+                } catch (error) {
+                    alert('Failed to update status: ' + error.message);
+                }
+            };
+
+            const handleViewTicket = async (ticket) => {
+                try {
+                    const fullTicket = await api.getTicket(ticket.id);
+                    setViewingTicket(fullTicket);
+                } catch (error) {
+                    alert('Failed to load ticket details: ' + error.message);
+                }
+            };
+
+            const filteredTickets = tickets.filter(ticket => {
+                const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus;
+                const matchesPriority = filterPriority === 'all' || ticket.priority === filterPriority;
+                const matchesSearch = !searchQuery || 
+                    ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    ticket.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    ticket.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    ticket.id.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesStatus && matchesPriority && matchesSearch;
+            });
+
+            if (loading) {
+                return <div className="loading">Loading tickets...</div>;
+            }
+
+            return (
+                <div className="app-container">
+                    <header className="header">
+                        <div className="header-content">
+                            <div className="logo">
+                                <div className="logo-icon">T</div>
+                                <div className="logo-text">
+                                    <h1>MSP Ticket Manager</h1>
+                                    <p>CLOUD EDITION v2.0</p>
+                                </div>
+                            </div>
+                            <div className="header-actions">
+                                <nav className="nav-tabs">
+                                    <button 
+                                        className={`nav-tab ${activeTab === 'tickets' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('tickets')}
+                                    >
+                                        Tickets
+                                    </button>
+                                    <button 
+                                        className={`nav-tab ${activeTab === 'reports' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('reports')}
+                                    >
+                                        Reports
+                                    </button>
+                                </nav>
+                                <div className="user-info">
+                                    👤 {user.full_name || user.username}
+                                </div>
+                                <button className="btn btn-primary" onClick={() => { setEditingTicket(null); setShowModal(true); }}>
+                                    ✦ New Ticket
+                                </button>
+                                <button className="btn btn-secondary" onClick={onLogout}>
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="main-content">
+                        {activeTab === 'tickets' && stats && (
+                            <>
+                                <div className="stats-grid">
+                                    <div className="stat-card">
+                                        <div className="stat-label">Total Tickets</div>
+                                        <div className="stat-value">{stats.summary.total}</div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <div className="stat-label">Open & Active</div>
+                                        <div className="stat-value">{stats.summary.open}</div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <div className="stat-label">Resolved</div>
+                                        <div className="stat-value">{stats.summary.resolved}</div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <div className="stat-label">Critical Issues</div>
+                                        <div className="stat-value">{stats.summary.critical}</div>
+                                    </div>
+                                </div>
+
+                                <div className="filters">
+                                    <div className="search-box">
+                                        <span className="search-icon">🔍</span>
+                                        <input 
+                                            type="text" 
+                                            className="search-input" 
+                                            placeholder="Search tickets..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="filter-group">
+                                        <label className="form-label">Status</label>
+                                        <select 
+                                            className="form-select"
+                                            value={filterStatus}
+                                            onChange={(e) => setFilterStatus(e.target.value)}
+                                        >
+                                            <option value="all">All Statuses</option>
+                                            {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="filter-group">
+                                        <label className="form-label">Priority</label>
+                                        <select 
+                                            className="form-select"
+                                            value={filterPriority}
+                                            onChange={(e) => setFilterPriority(e.target.value)}
+                                        >
+                                            <option value="all">All Priorities</option>
+                                            {priorities.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredTickets.length === 0 ? (
+                                    <div className="empty-state">
+                                        <div className="empty-state-icon">📋</div>
+                                        <h2>No tickets found</h2>
+                                        <p>Create your first ticket to get started</p>
+                                    </div>
+                                ) : (
+                                    <div className="ticket-grid">
+                                        {filteredTickets.map(ticket => (
+                                            <div 
+                                                key={ticket.id} 
+                                                className="ticket-card"
+                                                onClick={() => handleViewTicket(ticket)}
+                                            >
+                                                <div className="ticket-header">
+                                                    <div>
+                                                        <div className="ticket-id">{ticket.id}</div>
+                                                        <h3 className="ticket-title">{ticket.title}</h3>
+                                                    </div>
+                                                </div>
+                                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                                                    {ticket.description.substring(0, 120)}...
+                                                </p>
+                                                <div className="ticket-meta">
+                                                    <span className={`badge priority-${ticket.priority.toLowerCase()}`}>
+                                                        {ticket.priority}
+                                                    </span>
+                                                    <span className={`badge status-${ticket.status.toLowerCase().replace(' ', '-')}`}>
+                                                        {ticket.status}
+                                                    </span>
+                                                    <span className="client-badge">{ticket.client}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {activeTab === 'reports' && stats && (
+                            <ReportsView stats={stats} />
+                        )}
+                    </main>
+
+                    {showModal && (
+                        <TicketModal 
+                            ticket={editingTicket}
+                            onClose={() => { setShowModal(false); setEditingTicket(null); }}
+                            onSave={editingTicket ? handleUpdateTicket : handleCreateTicket}
+                            statuses={statuses}
+                            priorities={priorities}
+                            categories={categories}
+                        />
+                    )}
+
+                    {viewingTicket && (
+                        <TicketDetailModal 
+                            ticket={viewingTicket}
+                            onClose={() => setViewingTicket(null)}
+                            onEdit={(ticket) => { setEditingTicket(ticket); setShowModal(true); setViewingTicket(null); }}
+                            onDelete={handleDeleteTicket}
+                            onStatusChange={handleStatusChange}
+                            onRefresh={async () => {
+                                const updated = await api.getTicket(viewingTicket.id);
+                                setViewingTicket(updated);
+                                await loadData();
+                            }}
+                            statuses={statuses}
+                            user={user}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        function TicketModal({ ticket, onClose, onSave, statuses, priorities, categories }) {
+            const [formData, setFormData] = useState(ticket || {
+                title: '',
+                description: '',
+                client: '',
+                contact_name: '',
+                contact_email: '',
+                contact_phone: '',
+                priority: 'Medium',
+                status: 'New',
+                category: 'Other',
+                assigned_to: ''
+            });
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave(formData);
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>{ticket ? 'Edit Ticket' : 'Create New Ticket'}</h2>
+                            <button className="btn btn-secondary" onClick={onClose}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <form onSubmit={handleSubmit}>
+                                <div className="form-group">
+                                    <label className="form-label">Ticket Title *</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-input"
+                                        value={formData.title}
+                                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Description *</label>
+                                    <textarea 
+                                        className="form-textarea"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Client Name *</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-input"
+                                            value={formData.client}
+                                            onChange={(e) => setFormData({...formData, client: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Contact Name</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-input"
+                                            value={formData.contact_name}
+                                            onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Contact Email</label>
+                                        <input 
+                                            type="email" 
+                                            className="form-input"
+                                            value={formData.contact_email}
+                                            onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Contact Phone</label>
+                                        <input 
+                                            type="tel" 
+                                            className="form-input"
+                                            value={formData.contact_phone}
+                                            onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Priority</label>
+                                        <select 
+                                            className="form-select"
+                                            value={formData.priority}
+                                            onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                                        >
+                                            {priorities.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Status</label>
+                                        <select 
+                                            className="form-select"
+                                            value={formData.status}
+                                            onChange={(e) => setFormData({...formData, status: e.target.value})}
+                                        >
+                                            {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Category</label>
+                                        <select 
+                                            className="form-select"
+                                            value={formData.category}
+                                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                        >
+                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Assigned To</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-input"
+                                        value={formData.assigned_to}
+                                        onChange={(e) => setFormData({...formData, assigned_to: e.target.value})}
+                                        placeholder="Technician name"
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                                        {ticket ? 'Update Ticket' : 'Create Ticket'}
+                                    </button>
+                                    <button type="button" className="btn btn-secondary" onClick={onClose}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function TicketDetailModal({ ticket, onClose, onEdit, onDelete, onStatusChange, onRefresh, statuses, user }) {
+            const [newNote, setNewNote] = useState('');
+            const [savingNote, setSavingNote] = useState(false);
+
+            const formatDate = (dateString) => {
+                // Parse the date - if it doesn't have timezone info, treat it as UTC
+                let date;
+                if (dateString.includes('T') || dateString.includes('Z')) {
+                    date = new Date(dateString);
+                } else {
+                    // SQLite format without timezone - treat as UTC
+                    date = new Date(dateString + ' UTC');
+                }
+                
+                // Format: Feb 11, 2024 at 5:14 PM EST
+                return date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZoneName: 'short'
+                });
+            };
+
+            const handleAddNote = async (e) => {
+                e.preventDefault();
+                if (!newNote.trim()) return;
+
+                setSavingNote(true);
+                try {
+                    await api.addNote(ticket.id, newNote);
+                    setNewNote('');
+                    await onRefresh();
+                } catch (error) {
+                    alert('Failed to add note: ' + error.message);
+                } finally {
+                    setSavingNote(false);
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace' }}>
+                                    {ticket.id}
+                                </div>
+                                <h2 style={{ marginTop: '0.25rem' }}>{ticket.title}</h2>
+                            </div>
+                            <button className="btn btn-secondary" onClick={onClose}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <div style={{ marginBottom: '2rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                                    <span className={`badge priority-${ticket.priority.toLowerCase()}`}>
+                                        {ticket.priority} Priority
+                                    </span>
+                                    <span className={`badge status-${ticket.status.toLowerCase().replace(' ', '-')}`}>
+                                        {ticket.status}
+                                    </span>
+                                    <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                                        {ticket.category}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style={{ background: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                                <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>DESCRIPTION</h3>
+                                <p style={{ color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{ticket.description}</p>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>CLIENT INFO</h3>
+                                    <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px' }}>
+                                        <p><strong>Client:</strong> {ticket.client}</p>
+                                        {ticket.contact_name && <p><strong>Contact:</strong> {ticket.contact_name}</p>}
+                                        {ticket.contact_email && <p><strong>Email:</strong> {ticket.contact_email}</p>}
+                                        {ticket.contact_phone && <p><strong>Phone:</strong> {ticket.contact_phone}</p>}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>TICKET INFO</h3>
+                                    <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px' }}>
+                                        <p><strong>Created:</strong> {formatDate(ticket.created_at)}</p>
+                                        <p><strong>Updated:</strong> {formatDate(ticket.updated_at)}</p>
+                                        {ticket.assigned_to && <p><strong>Assigned:</strong> {ticket.assigned_to}</p>}
+                                        {ticket.created_by && <p><strong>Created by:</strong> {ticket.created_by}</p>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>UPDATE STATUS</h3>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {statuses.map(status => (
+                                        <button
+                                            key={status}
+                                            className={`btn btn-sm ${ticket.status === status ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => onStatusChange(ticket.id, status)}
+                                        >
+                                            {status}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* WORK NOTES SECTION */}
+                            <div className="notes-section">
+                                <div className="notes-header">
+                                    <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>📝 Work Notes & Updates</h3>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                        {ticket.notes?.length || 0} {ticket.notes?.length === 1 ? 'note' : 'notes'}
+                                    </span>
+                                </div>
+
+                                {ticket.notes && ticket.notes.length > 0 ? (
+                                    <div className="notes-list">
+                                        {ticket.notes.map(note => (
+                                            <div key={note.id} className="note-item">
+                                                <div className="note-header">
+                                                    <span className="note-author">{note.full_name || note.username}</span>
+                                                    <span className="note-timestamp">{formatDate(note.created_at)}</span>
+                                                </div>
+                                                <div className="note-content">{note.note}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="empty-notes">No work notes yet. Add your first note below!</div>
+                                )}
+
+                                <form onSubmit={handleAddNote} className="note-form">
+                                    <label className="form-label">Add Work Note</label>
+                                    <div className="note-input-wrapper">
+                                        <textarea
+                                            className="form-textarea"
+                                            value={newNote}
+                                            onChange={(e) => setNewNote(e.target.value)}
+                                            placeholder="Document work performed, solutions attempted, time spent, parts used, etc..."
+                                            disabled={savingNote}
+                                        />
+                                        <button 
+                                            type="submit" 
+                                            className="btn btn-primary"
+                                            disabled={savingNote || !newNote.trim()}
+                                        >
+                                            {savingNote ? 'Saving...' : 'Add Note'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div className="action-buttons" style={{ marginTop: '2rem' }}>
+                                <button className="btn btn-primary" onClick={() => onEdit(ticket)}>
+                                    Edit Ticket
+                                </button>
+                                <button className="btn btn-danger" onClick={() => onDelete(ticket.id)}>
+                                    Delete Ticket
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function ReportsView({ stats }) {
+            return (
+                <div>
+                    <h2 style={{ marginBottom: '2rem', fontSize: '2rem' }}>Ticket Reports & Analytics</h2>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Count</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats.byStatus.map(({ status, count }) => (
+                                        <tr key={status}>
+                                            <td>
+                                                <span className={`badge status-${status.toLowerCase().replace(' ', '-')}`}>
+                                                    {status}
+                                                </span>
+                                            </td>
+                                            <td>{count}</td>
+                                            <td>{((count / stats.summary.total) * 100).toFixed(1)}%</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Count</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats.byPriority.map(({ priority, count }) => (
+                                        <tr key={priority}>
+                                            <td>
+                                                <span className={`badge priority-${priority.toLowerCase()}`}>
+                                                    {priority}
+                                                </span>
+                                            </td>
+                                            <td>{count}</td>
+                                            <td>{((count / stats.summary.total) * 100).toFixed(1)}%</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats.byCategory.map(({ category, count }) => (
+                                        <tr key={category}>
+                                            <td>{category}</td>
+                                            <td>{count}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Top Clients</th>
+                                        <th>Tickets</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats.topClients.map(({ client, count }) => (
+                                        <tr key={client}>
+                                            <td>{client}</td>
+                                            <td>{count}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

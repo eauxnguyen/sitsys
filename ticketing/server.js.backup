@@ -1,0 +1,335 @@
+const express = require('express');
+const Database = require('better-sqlite3');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
+const bodyParser = require('body-parser');
+const rateLimit = require('express-rate-limit');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Initialize SQLite database
+const db = new Database('ticketing.db');
+
+// Create tables
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    full_name TEXT,
+    email TEXT,
+    role TEXT DEFAULT 'technician',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS tickets (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    client TEXT NOT NULL,
+    contact_name TEXT,
+    contact_email TEXT,
+    contact_phone TEXT,
+    priority TEXT NOT NULL,
+    status TEXT NOT NULL,
+    category TEXT NOT NULL,
+    assigned_to TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS ticket_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    note TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS time_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    hours REAL NOT NULL,
+    description TEXT,
+    entry_date DATE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+`);
+
+// Create default admin user if not exists
+const checkAdmin = db.prepare('SELECT * FROM users WHERE username = ?').get('admin');
+if (!checkAdmin) {
+  const hashedPassword = bcrypt.hashSync('admin123', 10);
+  db.prepare('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)').run('admin', hashedPassword, 'Administrator', 'admin');
+  console.log('Default admin user created: admin/admin123 - PLEASE CHANGE THIS PASSWORD!');
+}
+
+// Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('public'));
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'change-this-secret-key-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // Set to true if using HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
+// Auth middleware
+const requireAuth = (req, res, next) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
+
+// ============ AUTH ROUTES ============
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+  
+  if (!user || !bcrypt.compareSync(password, user.password)) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  
+  req.session.userId = user.id;
+  req.session.username = user.username;
+  req.session.role = user.role;
+  
+  res.json({ 
+    success: true, 
+    user: { 
+      id: user.id, 
+      username: user.username, 
+      full_name: user.full_name,
+      role: user.role 
+    } 
+  });
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy();
+  res.json({ success: true });
+});
+
+app.get('/api/auth/check', (req, res) => {
+  if (req.session.userId) {
+    const user = db.prepare('SELECT id, username, full_name, email, role FROM users WHERE id = ?').get(req.session.userId);
+    res.json({ authenticated: true, user });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
+app.post('/api/auth/change-password', requireAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
+  
+  if (!bcrypt.compareSync(currentPassword, user.password)) {
+    return res.status(400).json({ error: 'Current password is incorrect' });
+  }
+  
+  const hashedPassword = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, req.session.userId);
+  
+  res.json({ success: true });
+});
+
+// ============ TICKET ROUTES ============
+
+app.get('/api/tickets', requireAuth, (req, res) => {
+  const tickets = db.prepare('SELECT * FROM tickets ORDER BY created_at DESC').all();
+  res.json(tickets);
+});
+
+app.get('/api/tickets/:id', requireAuth, (req, res) => {
+  const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(req.params.id);
+  if (!ticket) {
+    return res.status(404).json({ error: 'Ticket not found' });
+  }
+  
+  const notes = db.prepare(`
+    SELECT n.*, u.username, u.full_name 
+    FROM ticket_notes n 
+    JOIN users u ON n.user_id = u.id 
+    WHERE n.ticket_id = ? 
+    ORDER BY n.created_at DESC
+  `).all(req.params.id);
+  
+  const timeEntries = db.prepare(`
+    SELECT t.*, u.username, u.full_name 
+    FROM time_entries t 
+    JOIN users u ON t.user_id = u.id 
+    WHERE t.ticket_id = ? 
+    ORDER BY t.entry_date DESC
+  `).all(req.params.id);
+  
+  res.json({ ...ticket, notes, timeEntries });
+});
+
+app.post('/api/tickets', requireAuth, (req, res) => {
+  const { title, description, client, contact_name, contact_email, contact_phone, priority, status, category, assigned_to } = req.body;
+  
+  // Generate ticket ID
+  const prefix = 'TKT';
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  const ticketId = `${prefix}-${timestamp}-${random}`;
+  
+  const stmt = db.prepare(`
+    INSERT INTO tickets (id, title, description, client, contact_name, contact_email, contact_phone, priority, status, category, assigned_to, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  stmt.run(ticketId, title, description, client, contact_name, contact_email, contact_phone, priority, status, category, assigned_to, req.session.username);
+  
+  const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
+  res.status(201).json(ticket);
+});
+
+app.put('/api/tickets/:id', requireAuth, (req, res) => {
+  const { title, description, client, contact_name, contact_email, contact_phone, priority, status, category, assigned_to } = req.body;
+  
+  const stmt = db.prepare(`
+    UPDATE tickets 
+    SET title = ?, description = ?, client = ?, contact_name = ?, contact_email = ?, contact_phone = ?, 
+        priority = ?, status = ?, category = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  
+  stmt.run(title, description, client, contact_name, contact_email, contact_phone, priority, status, category, assigned_to, req.params.id);
+  
+  const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(req.params.id);
+  res.json(ticket);
+});
+
+app.delete('/api/tickets/:id', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM tickets WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+// ============ TICKET NOTES ROUTES ============
+
+app.post('/api/tickets/:id/notes', requireAuth, (req, res) => {
+  const { note } = req.body;
+  
+  const stmt = db.prepare('INSERT INTO ticket_notes (ticket_id, user_id, note) VALUES (?, ?, ?)');
+  const result = stmt.run(req.params.id, req.session.userId, note);
+  
+  const newNote = db.prepare(`
+    SELECT n.*, u.username, u.full_name 
+    FROM ticket_notes n 
+    JOIN users u ON n.user_id = u.id 
+    WHERE n.id = ?
+  `).get(result.lastInsertRowid);
+  
+  res.status(201).json(newNote);
+});
+
+// ============ TIME ENTRY ROUTES ============
+
+app.post('/api/tickets/:id/time', requireAuth, (req, res) => {
+  const { hours, description, entry_date } = req.body;
+  
+  const stmt = db.prepare('INSERT INTO time_entries (ticket_id, user_id, hours, description, entry_date) VALUES (?, ?, ?, ?, ?)');
+  const result = stmt.run(req.params.id, req.session.userId, hours, description, entry_date);
+  
+  const newEntry = db.prepare(`
+    SELECT t.*, u.username, u.full_name 
+    FROM time_entries t 
+    JOIN users u ON t.user_id = u.id 
+    WHERE t.id = ?
+  `).get(result.lastInsertRowid);
+  
+  res.status(201).json(newEntry);
+});
+
+// ============ USER ROUTES ============
+
+app.get('/api/users', requireAuth, (req, res) => {
+  const users = db.prepare('SELECT id, username, full_name, email, role FROM users ORDER BY username').all();
+  res.json(users);
+});
+
+app.post('/api/users', requireAuth, (req, res) => {
+  // Only admins can create users
+  if (req.session.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
+  const { username, password, full_name, email, role } = req.body;
+  
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  
+  try {
+    const stmt = db.prepare('INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)');
+    stmt.run(username, hashedPassword, full_name, email, role || 'technician');
+    
+    const user = db.prepare('SELECT id, username, full_name, email, role FROM users WHERE username = ?').get(username);
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(400).json({ error: 'Username already exists' });
+  }
+});
+
+// ============ STATISTICS ROUTES ============
+
+app.get('/api/stats', requireAuth, (req, res) => {
+  const total = db.prepare('SELECT COUNT(*) as count FROM tickets').get().count;
+  const open = db.prepare("SELECT COUNT(*) as count FROM tickets WHERE status IN ('New', 'Open', 'In Progress')").get().count;
+  const resolved = db.prepare("SELECT COUNT(*) as count FROM tickets WHERE status = 'Resolved'").get().count;
+  const critical = db.prepare("SELECT COUNT(*) as count FROM tickets WHERE priority = 'Critical' AND status NOT IN ('Resolved', 'Closed')").get().count;
+  
+  const byStatus = db.prepare('SELECT status, COUNT(*) as count FROM tickets GROUP BY status').all();
+  const byPriority = db.prepare('SELECT priority, COUNT(*) as count FROM tickets GROUP BY priority').all();
+  const byCategory = db.prepare('SELECT category, COUNT(*) as count FROM tickets GROUP BY category').all();
+  const topClients = db.prepare('SELECT client, COUNT(*) as count FROM tickets GROUP BY client ORDER BY count DESC LIMIT 10').all();
+  
+  res.json({
+    summary: { total, open, resolved, critical },
+    byStatus,
+    byPriority,
+    byCategory,
+    topClients
+  });
+});
+
+// Serve frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`MSP Ticketing System running on port ${PORT}`);
+  console.log(`Access at: http://localhost:${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  db.close();
+  process.exit(0);
+});
