@@ -1,6 +1,6 @@
 #!/bin/bash
-BACKUP_DIR="/var/www/msp-ticketing/backups"
-DB_FILE="/var/www/msp-ticketing/ticketing.db"
+BACKUP_DIR="/var/www/sitsys/ticketing/backups"
+DB_FILE="/var/www/sitsys/ticketing/ticketing.db"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/ticketing_$TIMESTAMP.db"
 
