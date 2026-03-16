@@ -321,6 +321,28 @@ app.get('/api/tickets', requireAuth, (req, res) => {
   res.json(tickets);
 });
 
+// ============ FULL-TEXT SEARCH ROUTE ============
+// Must be defined BEFORE /api/tickets/:id to prevent Express matching 'search' as a ticket ID
+
+app.get('/api/tickets/search', requireAuth, (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json([]);
+  const like = `%${q}%`;
+  const results = db.prepare(`
+    SELECT DISTINCT t.*, c.company_name as client_name
+    FROM tickets t
+    LEFT JOIN clients c ON t.client_id = c.id
+    LEFT JOIN ticket_notes n ON n.ticket_id = t.id
+    WHERE t.title LIKE ?
+      OR t.description LIKE ?
+      OR t.id LIKE ?
+      OR c.company_name LIKE ?
+      OR n.note LIKE ?
+    ORDER BY t.updated_at DESC
+  `).all(like, like, like, like, like);
+  res.json(results);
+});
+
 app.get('/api/tickets/:id', requireAuth, (req, res) => {
   const ticket = db.prepare(`
     SELECT t.*, c.company_name as client_name, cc.name as contact_name, cc.email as contact_email, cc.phone as contact_phone
@@ -410,33 +432,17 @@ app.delete('/api/tickets/:id', requireAuth, (req, res) => {
 // ============ TICKET NOTES ROUTES ============
 
 app.post('/api/tickets/:id/notes', requireAuth, (req, res) => {
-
-
-
-
   const { note, is_client_facing } = req.body;
 
-  
-
   const stmt = db.prepare('INSERT INTO ticket_notes (ticket_id, user_id, note, is_client_facing) VALUES (?, ?, ?, ?)');
-
   const result = stmt.run(req.params.id, req.session.userId, note, is_client_facing ? 1 : 0);
 
-  
-
   const newNote = db.prepare(`
-
     SELECT n.*, u.username, u.full_name 
-
     FROM ticket_notes n 
-
     JOIN users u ON n.user_id = u.id 
-
     WHERE n.id = ?
-
   `).get(result.lastInsertRowid);
-
-  
 
   res.status(201).json(newNote);
 });
@@ -445,7 +451,6 @@ app.delete("/api/tickets/:ticketId/notes/:noteId", requireAuth, (req, res) => {
   db.prepare("DELETE FROM ticket_notes WHERE id = ? AND ticket_id = ?").run(req.params.noteId, req.params.ticketId);
   res.json({ success: true });
 });
-
 
 // ============ TIME ENTRY ROUTES ============
 
@@ -520,9 +525,9 @@ app.get('/api/stats', requireAuth, (req, res) => {
     topClients
   });
 });
-  const fs = require('fs');
+
+const fs = require('fs');
 app.get("/api/backup/status", requireAuth, (req, res) => {
-  const path = require('path');
   const backupDir = path.join(__dirname, 'backups');
   
   try {

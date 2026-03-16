@@ -75,6 +75,10 @@ body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--tex
 .search-wrap::before{content:'⌕';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;z-index:1;}
 .search-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px 6px 30px;color:var(--text);font-family:'JetBrains Mono';font-size:12px;}
 .search-input:focus{outline:none;border-color:var(--accent);}
+.search-input.searching{border-color:var(--purple);animation:pulse-border .8s ease infinite;}
+@keyframes pulse-border{0%,100%{border-color:var(--purple);}50%{border-color:var(--accent);}}
+.search-mode-badge{font-size:10px;color:var(--purple);padding:2px 6px;border-radius:10px;background:rgba(188,140,255,.12);border:1px solid rgba(188,140,255,.2);white-space:nowrap;display:none;}
+.search-mode-badge.visible{display:inline-flex;align-items:center;gap:4px;}
 .filter-select{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px;color:var(--text);font-family:'JetBrains Mono';font-size:12px;cursor:pointer;}
 .filter-select:focus{outline:none;border-color:var(--accent);}
 .view-toggle{display:flex;gap:2px;}
@@ -294,18 +298,21 @@ input[type=checkbox]{accent-color:var(--accent);cursor:pointer;width:14px;height
     <!-- TICKETS PAGE -->
     <div class="page active" id="page-tickets">
       <div class="filter-bar">
-        <div class="search-wrap"><input type="text" class="search-input" id="ticket-search" placeholder="Search by title, ID, client..."></div>
+        <div class="search-wrap"><input type="text" class="search-input" id="ticket-search" placeholder="Search tickets, notes, descriptions..."></div>
+        <span class="search-mode-badge" id="search-mode-badge">📝 searching notes</span>
         <select class="filter-select" id="filter-status">
           <option value="">All Status</option>
           <option value="New">New</option>
           <option value="Open">Open</option>
           <option value="In Progress">In Progress</option>
           <option value="Resolved">Resolved</option>
-          <option value="Closed">Closed</option><option value="Follow-up">Follow-up</option>
+          <option value="Closed">Closed</option>
+          <option value="Follow-up">Follow-up</option>
         </select>
         <select class="filter-select" id="filter-priority">
           <option value="">All Priority</option>
-          <option value="Project">Project</option><option value="Critical">Critical</option>
+          <option value="Project">Project</option>
+          <option value="Critical">Critical</option>
           <option value="High">High</option>
           <option value="Medium">Medium</option>
           <option value="Low">Low</option>
@@ -587,7 +594,7 @@ input[type=checkbox]{accent-color:var(--accent);cursor:pointer;width:14px;height
 </div>
 
 <script>
-// Version 2.5.1 - Cache bust
+// Version 2.6 - Full-text search across notes and descriptions
 // ===================== STATE =====================
 const S = {
   tickets:[], clients:[], contacts:[], users:[],
@@ -597,6 +604,8 @@ const S = {
   editingContactId:null, editingContactClientId:null,
   filters:{search:'',status:'',priority:'',client:'',assignee:''},
   presets:JSON.parse(localStorage.getItem('sitsys_presets')||'[]'),
+  searchResults:null, // null = use local filter; array = use server search results
+  searchDebounce:null,
 };
 
 // ===================== API =====================
@@ -700,11 +709,59 @@ function updateStats(){
   document.getElementById('nav-client-count').textContent=S.clients.length;
 }
 
+// ===================== SEARCH =====================
+// Called on every keystroke with debounce
+function handleSearchInput(val) {
+  S.filters.search = val;
+  const badge = document.getElementById('search-mode-badge');
+  const input = document.getElementById('ticket-search');
+
+  if (!val.trim()) {
+    // Empty search — back to local filter
+    S.searchResults = null;
+    badge.classList.remove('visible');
+    input.classList.remove('searching');
+    renderTickets();
+    renderKanban();
+    return;
+  }
+
+  // Show searching indicator
+  input.classList.add('searching');
+  badge.classList.remove('visible');
+
+  // Debounce 300ms
+  clearTimeout(S.searchDebounce);
+  S.searchDebounce = setTimeout(async () => {
+    try {
+      const results = await api('GET', `/api/tickets/search?q=${encodeURIComponent(val.trim())}`);
+      S.searchResults = results || [];
+      input.classList.remove('searching');
+      badge.classList.add('visible');
+      renderTickets();
+      renderKanban();
+    } catch(e) {
+      // Fallback to local search on error
+      S.searchResults = null;
+      input.classList.remove('searching');
+      badge.classList.remove('visible');
+      renderTickets();
+      renderKanban();
+    }
+  }, 300);
+}
+
 // ===================== TICKET LIST =====================
 function getFiltered(){
-  let t=[...S.tickets];
+  // If we have server search results, use those as the base
+  let t = S.searchResults !== null ? [...S.searchResults] : [...S.tickets];
+
   const f=S.filters;
-  if(f.search){const s=f.search.toLowerCase();t=t.filter(tk=>tk.title?.toLowerCase().includes(s)||tk.id?.toLowerCase().includes(s)||tk.client_name?.toLowerCase().includes(s)||tk.description?.toLowerCase().includes(s));}
+  // Only apply local text filter if NOT using server results
+  if(S.searchResults === null && f.search){
+    const s=f.search.toLowerCase();
+    t=t.filter(tk=>tk.title?.toLowerCase().includes(s)||tk.id?.toLowerCase().includes(s)||tk.client_name?.toLowerCase().includes(s)||tk.description?.toLowerCase().includes(s));
+  }
   if(f.status) t=t.filter(tk=>tk.status===f.status);
   if(f.priority) t=t.filter(tk=>tk.priority===f.priority);
   if(f.client) t=t.filter(tk=>tk.client_id==f.client);
@@ -1337,12 +1394,19 @@ document.getElementById('nav-new-status').addEventListener('click',()=>{
 });
 
 // ===================== FILTERS =====================
-document.getElementById('ticket-search').addEventListener('input',e=>{S.filters.search=e.target.value;renderTickets();renderKanban();});
+document.getElementById('ticket-search').addEventListener('input',e=>{handleSearchInput(e.target.value);});
 document.getElementById('filter-status').addEventListener('change',e=>{S.filters.status=e.target.value;renderTickets();renderKanban();});
 document.getElementById('filter-priority').addEventListener('change',e=>{S.filters.priority=e.target.value;renderTickets();renderKanban();});
 document.getElementById('filter-client').addEventListener('change',e=>{S.filters.client=e.target.value;renderTickets();renderKanban();});
 document.getElementById('filter-assignee').addEventListener('change',e=>{S.filters.assignee=e.target.value;renderTickets();renderKanban();});
-function clearFilters(){S.filters={search:'',status:'',priority:'',client:'',assignee:''};['ticket-search','filter-status','filter-priority','filter-client','filter-assignee'].forEach(id=>{document.getElementById(id).value='';});renderTickets();renderKanban();}
+function clearFilters(){
+  S.filters={search:'',status:'',priority:'',client:'',assignee:''};
+  S.searchResults=null;
+  ['ticket-search','filter-status','filter-priority','filter-client','filter-assignee'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('search-mode-badge').classList.remove('visible');
+  document.getElementById('ticket-search').classList.remove('searching');
+  renderTickets();renderKanban();
+}
 window.clearFilters=clearFilters;
 
 // ===================== VIEW TOGGLES =====================
