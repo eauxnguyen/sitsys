@@ -1,6 +1,6 @@
 # SITSYS Administration Guide
-**Version:** 2.5  
-**Last Updated:** March 6, 2026  
+**Version:** 2.6  
+**Last Updated:** March 16, 2026  
 **System Owner:** obrand@gistlink.net
 
 ---
@@ -123,7 +123,7 @@ sudo -u www-data /var/www/sitsys/ticketing/backup.sh
 │   ├── backup.sh          # Backup script
 │   ├── package.json       # Node dependencies
 │   └── node_modules/      # Installed packages
-├── docs/                  # Documentation (future)
+├── docs/                  # Documentation
 ├── scripts/               # Utility scripts (future)
 └── .git/                  # Git repository
 ```
@@ -136,6 +136,7 @@ sudo -u www-data /var/www/sitsys/ticketing/backup.sh
 | Backend Server | `/var/www/sitsys/ticketing/server.js` |
 | Database | `/var/www/sitsys/ticketing/ticketing.db` |
 | Backups | `/var/www/sitsys/ticketing/backups/` |
+| Deploy Script | `/usr/local/bin/sitsys-deploy` |
 | Systemd Service | `/etc/systemd/system/msp-ticketing.service` |
 | Nginx Config | `/etc/nginx/sites-enabled/msp-ticketing` |
 | SSL Certificates | `/etc/letsencrypt/live/tickets.sitsys.co/` |
@@ -415,6 +416,58 @@ After fresh install:
 - **Branch:** main
 - **User:** eauxnguyen (obrand@gistlink.net)
 
+### Standard Deploy Workflow (Recommended)
+
+All frontend changes to `index.html` should follow this pattern:
+
+1. Build the updated `index.html` (locally or with Claude)
+2. Deploy the file to the server:
+   ```bash
+   cp /path/to/new/index.html /var/www/sitsys/ticketing/public/index.html
+   ```
+3. Run the deploy script to commit and push to GitHub:
+   ```bash
+   sitsys-deploy "Brief description of change"
+   ```
+
+This ensures production and GitHub are always in sync and every change is rollback-able.
+
+### The sitsys-deploy Script
+
+Located at `/usr/local/bin/sitsys-deploy`. Run from anywhere after deploying a new file.
+
+```bash
+# With a custom commit message (recommended)
+sitsys-deploy "Add full-text search to ticket notes"
+
+# With default message
+sitsys-deploy
+```
+
+The script:
+- Stages `ticketing/public/index.html`
+- Commits with your message (or a default message if none provided)
+- Pushes to GitHub `main` branch
+- Confirms success
+
+**Source of the script** (`/usr/local/bin/sitsys-deploy`):
+```bash
+#!/bin/bash
+set -e
+
+PROD="/var/www/sitsys/ticketing/public/index.html"
+REPO="/var/www/sitsys"
+MSG="${1:-Deploy: update index.html}"
+
+echo "→ Committing current production file..."
+cd "$REPO"
+git add ticketing/public/index.html
+git commit -m "$MSG" || echo "Nothing to commit"
+git push origin main
+
+echo "✓ Done — production is in sync with GitHub"
+```
+
 ### Basic Git Workflow
 ```bash
 # Navigate to repo
@@ -466,7 +519,7 @@ git revert <commit-hash>
 git reset --hard <commit-hash>
 
 # Restore specific file from previous commit
-git checkout <commit-hash> -- ticketing/server.js
+git checkout <commit-hash> -- ticketing/public/index.html
 ```
 
 ### Branching (for testing changes)
@@ -495,26 +548,43 @@ The `.gitignore` file excludes:
 - `node_modules/` (installed packages)
 - `*.log` (log files)
 - `.env` (environment secrets)
+- `*.backup-*` (backup copies of index.html)
 
 ---
 
 ## 7. Deployment Procedures
 
-### Deploy Code Changes
+### Standard Frontend Deployment (index.html)
 
-**Method 1: Edit on Server (Quick fixes)**
+This is the primary workflow for UI changes. Always use atomic file swap + deploy script.
+
+```bash
+# 1. Copy new file to production
+cp /path/to/new/index.html /var/www/sitsys/ticketing/public/index.html
+
+# 2. Commit and push to GitHub in one command
+sitsys-deploy "Description of what changed"
+
+# 3. Verify site is working
+curl -I https://tickets.sitsys.co
+```
+
+No service restart needed for frontend-only changes — Nginx serves the file directly.
+
+### Deploy Backend Changes (server.js)
+
 ```bash
 # 1. Edit file
 sudo nano /var/www/sitsys/ticketing/server.js
 
-# 2. Test syntax (for server.js)
+# 2. Test syntax
 cd /var/www/sitsys/ticketing && node server.js
 # Press Ctrl+C if no errors
 
-# 3. Commit changes
+# 3. Commit and push
 cd /var/www/sitsys
-git add .
-git commit -m "Fix: description of change"
+git add ticketing/server.js
+git commit -m "Description of change"
 git push
 
 # 4. Restart service
@@ -876,6 +946,22 @@ git commit -m "Resolved merge conflict"
 git push
 ```
 
+### sitsys-deploy Reports Nothing to Commit
+**Cause:** The file on disk matches what's already in GitHub — no change detected.
+
+**Solution:**
+```bash
+# Verify the production file was actually updated
+ls -lh /var/www/sitsys/ticketing/public/index.html
+
+# Check git status manually
+cd /var/www/sitsys && git status
+
+# If file genuinely changed but git doesn't see it:
+git add -f ticketing/public/index.html
+git status
+```
+
 ### Backup Not Running
 **Cause:** Cron job not configured or backup script error
 
@@ -958,17 +1044,38 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-**7. Set up SSL**
+**7. Reinstall deploy script**
+```bash
+sudo tee /usr/local/bin/sitsys-deploy << 'EOF'
+#!/bin/bash
+set -e
+
+PROD="/var/www/sitsys/ticketing/public/index.html"
+REPO="/var/www/sitsys"
+MSG="${1:-Deploy: update index.html}"
+
+echo "→ Committing current production file..."
+cd "$REPO"
+git add ticketing/public/index.html
+git commit -m "$MSG" || echo "Nothing to commit"
+git push origin main
+
+echo "✓ Done — production is in sync with GitHub"
+EOF
+sudo chmod +x /usr/local/bin/sitsys-deploy
+```
+
+**8. Set up SSL**
 ```bash
 sudo certbot --nginx -d tickets.sitsys.co
 ```
 
-**8. Verify**
+**9. Verify**
 - Visit https://tickets.sitsys.co
 - Test login
 - Check all functionality
 
-**9. Set up backups**
+**10. Set up backups**
 ```bash
 # Add cron job
 (sudo crontab -u www-data -l 2>/dev/null; echo "0 * * * * /var/www/sitsys/ticketing/backup.sh") | sudo crontab -u www-data -
@@ -976,7 +1083,7 @@ sudo certbot --nginx -d tickets.sitsys.co
 
 ### Data Loss Prevention
 - **Primary:** Hourly automated backups (7-day retention)
-- **Secondary:** Git repository on GitHub (code only)
+- **Secondary:** Git repository on GitHub — every deploy is committed automatically via `sitsys-deploy`
 - **Tertiary:** Manual weekly off-server backups (recommended)
 
 ```bash
@@ -1008,13 +1115,15 @@ sudo -u www-data /var/www/sitsys/ticketing/backup.sh    # Manual backup
 ls -lht /var/www/sitsys/ticketing/backups/ | head -3    # Recent backups
 ```
 
-### Git
+### Git & Deploy
 ```bash
+sitsys-deploy "description"              # Commit + push index.html (standard deploy)
 cd /var/www/sitsys
 git status                               # Check changes
-git add . && git commit -m "msg"        # Commit
+git add . && git commit -m "msg"        # Manual commit
 git push                                 # Push to GitHub
 git log --oneline -10                   # Recent commits
+git reset --hard <hash>                 # Rollback to commit
 ```
 
 ### Nginx
@@ -1043,6 +1152,7 @@ sudo systemctl reload nginx              # Reload config
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0 | March 6, 2026 | Initial comprehensive guide | obrand@gistlink.net |
+| 2.6 | March 16, 2026 | Added sitsys-deploy script; updated deploy workflow, disaster recovery, troubleshooting, quick reference | obrand@gistlink.net |
 
 ---
 
