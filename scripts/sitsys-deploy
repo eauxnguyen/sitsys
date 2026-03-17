@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+PROD="/var/www/sitsys/ticketing/public/index.html"
+REPO="/var/www/sitsys"
+MSG="${1:-Deploy: update index.html}"
+
+echo "→ Committing current production file..."
+cd "$REPO"
+git add -A
+git commit -m "$MSG" || echo "Nothing to commit"
+git push origin main
+
+echo "✓ Done — production is in sync with GitHub"
