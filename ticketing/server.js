@@ -308,6 +308,66 @@ app.delete('/api/clients/:clientId/contacts/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ===== EMAIL TO TICKET WEBHOOK (SendGrid Inbound Parse) =====
+app.post('/api/email-to-ticket', (req, res) => {
+  try {
+    // SendGrid sends form data
+    const { from, subject, text, html } = req.body;
+    
+    // Parse sender email and name
+    let senderEmail = from;
+    let senderName = '';
+    const emailMatch = from.match(/<(.+?)>/);
+    if (emailMatch) {
+      senderEmail = emailMatch[1];
+      senderName = from.replace(/<.+?>/, '').trim();
+    }
+    
+    // Find or create client based on email domain
+    const domain = senderEmail.split('@')[1];
+    let client = db.prepare('SELECT * FROM clients WHERE LOWER(company_name) LIKE ?').get(`%${domain.split('.')[0]}%`);
+    
+    // If no client found, create a new one
+    if (!client) {
+      const companyName = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+      const insertClient = db.prepare('INSERT INTO clients (company_name, notes) VALUES (?, ?)');
+      const result = insertClient.run(companyName, `Auto-created from email: ${senderEmail}`);
+      client = { id: result.lastInsertRowid, company_name: companyName };
+    }
+    
+    // Find or create contact
+    let contact = db.prepare('SELECT * FROM client_contacts WHERE email = ?').get(senderEmail);
+    if (!contact) {
+      const insertContact = db.prepare('INSERT INTO client_contacts (client_id, name, email) VALUES (?, ?, ?)');
+      const result = insertContact.run(client.id, senderName || senderEmail, senderEmail);
+      contact = { id: result.lastInsertRowid };
+    }
+    
+    // Generate ticket ID
+    const prefix = 'TKT';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    const ticketId = `${prefix}-${timestamp}-${random}`;
+    
+    // Use plain text body, fallback to HTML
+    const description = text || html || 'No content';
+    
+    // Create ticket
+    const stmt = db.prepare(`
+      INSERT INTO tickets (id, title, description, client_id, contact_id, priority, status, category, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(ticketId, subject || '(No Subject)', description, client.id, contact.id, 'Medium', 'New', 'Email', 'system');
+    
+    console.log(`Email ticket created: ${ticketId} from ${senderEmail}`);
+    res.status(200).json({ success: true, ticketId });
+  } catch (error) {
+    console.log("SendGrid POST data:", JSON.stringify(req.body, null, 2));
+    console.error('Email webhook error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============ TICKET ROUTES ============
 
 app.get('/api/tickets', requireAuth, (req, res) => {
@@ -319,28 +379,6 @@ app.get('/api/tickets', requireAuth, (req, res) => {
     ORDER BY t.created_at DESC
   `).all();
   res.json(tickets);
-});
-
-// ============ FULL-TEXT SEARCH ROUTE ============
-// Must be defined BEFORE /api/tickets/:id to prevent Express matching 'search' as a ticket ID
-
-app.get('/api/tickets/search', requireAuth, (req, res) => {
-  const q = (req.query.q || '').trim();
-  if (!q) return res.json([]);
-  const like = `%${q}%`;
-  const results = db.prepare(`
-    SELECT DISTINCT t.*, c.company_name as client_name
-    FROM tickets t
-    LEFT JOIN clients c ON t.client_id = c.id
-    LEFT JOIN ticket_notes n ON n.ticket_id = t.id
-    WHERE t.title LIKE ?
-      OR t.description LIKE ?
-      OR t.id LIKE ?
-      OR c.company_name LIKE ?
-      OR n.note LIKE ?
-    ORDER BY t.updated_at DESC
-  `).all(like, like, like, like, like);
-  res.json(results);
 });
 
 app.get('/api/tickets/:id', requireAuth, (req, res) => {
@@ -433,17 +471,17 @@ app.delete('/api/tickets/:id', requireAuth, (req, res) => {
 
 app.post('/api/tickets/:id/notes', requireAuth, (req, res) => {
   const { note, is_client_facing } = req.body;
-
+  
   const stmt = db.prepare('INSERT INTO ticket_notes (ticket_id, user_id, note, is_client_facing) VALUES (?, ?, ?, ?)');
   const result = stmt.run(req.params.id, req.session.userId, note, is_client_facing ? 1 : 0);
-
+  
   const newNote = db.prepare(`
     SELECT n.*, u.username, u.full_name 
     FROM ticket_notes n 
     JOIN users u ON n.user_id = u.id 
     WHERE n.id = ?
   `).get(result.lastInsertRowid);
-
+  
   res.status(201).json(newNote);
 });
 
