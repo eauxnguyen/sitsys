@@ -5,9 +5,11 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const upload = multer();
 
 // Initialize SQLite database
 const db = new Database('ticketing.db');
@@ -309,10 +311,16 @@ app.delete('/api/clients/:clientId/contacts/:id', requireAuth, (req, res) => {
 });
 
 // ===== EMAIL TO TICKET WEBHOOK (SendGrid Inbound Parse) =====
-app.post('/api/email-to-ticket', (req, res) => {
+app.post('/api/email-to-ticket', upload.none(), (req, res) => {
   try {
-    // SendGrid sends form data
+    console.log("SendGrid data received:", JSON.stringify(req.body, null, 2));
+    
     const { from, subject, text, html } = req.body;
+    
+    if (!from) {
+      console.error("Missing 'from' field in request");
+      return res.status(400).json({ error: 'Missing from field' });
+    }
     
     // Parse sender email and name
     let senderEmail = from;
@@ -327,7 +335,6 @@ app.post('/api/email-to-ticket', (req, res) => {
     const domain = senderEmail.split('@')[1];
     let client = db.prepare('SELECT * FROM clients WHERE LOWER(company_name) LIKE ?').get(`%${domain.split('.')[0]}%`);
     
-    // If no client found, create a new one
     if (!client) {
       const companyName = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
       const insertClient = db.prepare('INSERT INTO clients (company_name, notes) VALUES (?, ?)');
@@ -362,7 +369,6 @@ app.post('/api/email-to-ticket', (req, res) => {
     console.log(`Email ticket created: ${ticketId} from ${senderEmail}`);
     res.status(200).json({ success: true, ticketId });
   } catch (error) {
-    console.log("SendGrid POST data:", JSON.stringify(req.body, null, 2));
     console.error('Email webhook error:', error);
     res.status(500).json({ error: error.message });
   }
